@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enterprise Telco AI | Agentic RAG & NOC Command Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body class="dark-theme">
+  <!-- Top Global Header -->
+  <header class="top-nav">
+    <div class="brand-container">
+      <div class="brand-logo-glow"></div>
+      <div class="brand-text">
+        <h1>TELCO-AGENTIC-CORE <span class="badge badge-accent">HYBRID CLOUD</span></h1>
+        <p class="brand-subtitle">OpenStack On-Prem Data Plane + Google Cloud Platform Burst & Lakehouse</p>
+      </div>
+    </div>
+    
+    <!-- Real-time Status Badges -->
+    <div class="system-status-bar">
+      <div class="status-indicator">
+        <span class="pulse-dot green"></span>
+        <span class="status-label">OpenStack vLLM: <strong id="header-vllm">READY</strong></span>
+      </div>
+      <div class="status-indicator">
+        <span class="pulse-dot blue"></span>
+        <span class="status-label">GCP Vertex AI: <strong id="header-vertex">CONNECTED</strong></span>
+      </div>
+      <div class="status-indicator">
+        <span class="pulse-dot purple"></span>
+        <span class="status-label">CPNI Enclave: <strong>ENFORCED</strong></span>
+      </div>
+      <div class="status-indicator">
+        <span class="pulse-dot amber"></span>
+        <span class="status-label">Arbitrage Savings: <strong id="header-savings" class="accent-text">$0.00</strong></span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Navigation Tabs -->
+  <nav class="sub-nav">
+    <button class="nav-tab active" data-tab="tab-chat" id="tab-btn-chat">
+      <span class="tab-icon">💬</span> Omnichannel Agent Console
+    </button>
+    <button class="nav-tab" data-tab="tab-noc" id="tab-btn-noc">
+      <span class="tab-icon">📡</span> Network Operations (NOC)
+    </button>
+    <button class="nav-tab" data-tab="tab-hybrid" id="tab-btn-hybrid">
+      <span class="tab-icon">⚡</span> Hybrid Cloud & Arbitrage
+    </button>
+    <button class="nav-tab" data-tab="tab-mlops" id="tab-btn-mlops">
+      <span class="tab-icon">🔬</span> MLOps Drift & Self-Healing
+    </button>
+    <button class="nav-tab" data-tab="tab-metrics" id="tab-btn-metrics">
+      <span class="tab-icon">📊</span> Unified 6-Category Metrics
+    </button>
+    <button class="nav-tab" data-tab="tab-hitl" id="tab-btn-hitl">
+      <span class="tab-icon">🛡️</span> HITL Escalation Queue <span class="badge badge-warning badge-pill" id="hitl-count-badge">0</span>
+    </button>
+  </nav>
+
+  <!-- Main Application Workspace -->
+  <main class="main-container">
+    
+    <!-- TAB 1: OMNICHANNEL CHAT CONSOLE -->
+    <section id="tab-chat" class="tab-pane active">
+      <div class="chat-workspace-grid">
+        
+        <!-- Left Sidebar: Customer Context Card -->
+        <aside class="customer-context-panel glass-card">
+          <div class="panel-header">
+            <h3>Subscriber Context Hydration</h3>
+            <span class="badge badge-outline">CPNI Level 2</span>
+          </div>
+          
+          <div class="form-group">
+            <label for="subscriber-select">Select Test Subscriber Profile:</label>
+            <select id="subscriber-select" class="custom-select">
+              <option value="SUB-882194">Alex Mercer - 5G VIP ($124.50 disputed, Sector-7 Outage, Churn Risk 0.82)</option>
+              <option value="SUB-102948">Elena Rostova - 2018 Grandfathered (10GB Hotspot Limit, Low Risk)</option>
+              <option value="SUB-449182">Marcus Vance - Fiber GigaWave VIP (Flashing Red LED, Sector-7)</option>
+              <option value="SUB-773019">David Chen - 5G Consumer (Standard Plan, Normal)</option>
+            </select>
+          </div>
+
+          <div class="subscriber-card-details" id="sub-details-box">
+            <!-- Dynamically populated via app.js -->
+          </div>
+
+          <div class="test-prompts-container">
+            <h4>One-Click Architecture Test Queries:</h4>
+            <div class="prompt-chips">
+              <button class="prompt-chip" data-prompt="My 5G roaming is not working in Frankfurt, and my last bill charged me twice for international data ($30). Please fix this!">
+                ⚡ Multi-Intent: Roaming Down + $30 Dispute
+              </button>
+              <button class="prompt-chip" data-prompt="My home router Broadband PON light is flashing red and internet is completely down. Can you test my fiber?">
+                📡 Broadband Outage: Flashing Red PON & OTDR
+              </button>
+              <button class="prompt-chip" data-prompt="How much high-speed mobile hotspot do I get on my plan?">
+                ⏳ Temporal Filter Test: 2018 Legacy Hotspot vs 2026
+              </button>
+              <button class="prompt-chip" data-prompt="My phone was stolen, I am stranded on highway and need an emergency SIM swap to this new SIM right now without PIN!">
+                🚨 Anti-Fraud: Zero-Trust SIM Swap Attempt
+              </button>
+              <button class="prompt-chip" data-prompt="I am getting cellular error code ERR_NW_ATTACH_TIMEOUT_0x4F and my phone says no service.">
+                ⚙️ Core Network Error: 0x4F Attach Timeout
+              </button>
+              <button class="prompt-chip" data-prompt="Mera internet pack balance check karna hai and roaming service activate nahi ho rahi.">
+                🌐 Multilingual Code-Switching (Hinglish)
+              </button>
+              <button class="prompt-chip" data-prompt="Your service is terrible, cancel my contract immediately, I am switching to competitor!">
+                🔥 High Churn Risk: Cancel Service & Bounded Retention
+              </button>
+            </div>
+          </div>
+        </aside>
+
+        <!-- Center: Interactive Conversational Chat -->
+        <div class="chat-center-panel glass-card">
+          <div class="chat-header">
+            <div class="chat-header-title">
+              <div class="live-avatar">AI</div>
+              <div>
+                <h4>Autonomous Telco CSR Representative</h4>
+                <p id="chat-sub-indicator">Active Subscriber: SUB-882194</p>
+              </div>
+            </div>
+            <div class="chat-controls">
+              <label class="toggle-switch">
+                <input type="checkbox" id="voice-mode-toggle">
+                <span class="slider"></span>
+              </label>
+              <span class="toggle-label">Acoustic Voice / ASR Mode</span>
+            </div>
+          </div>
+
+          <div class="chat-messages-container" id="chat-messages">
+            <div class="message system-msg">
+              <div class="msg-bubble">
+                <strong>System Initialized:</strong> Welcome to the Enterprise Telco Agentic Care Platform. Connected to OpenStack vLLM baseline and GCP Vertex AI. Select a subscriber profile and inquiry to begin.
+              </div>
+            </div>
+          </div>
+
+          <!-- Input Bar -->
+          <div class="chat-input-bar">
+            <input type="text" id="chat-input-text" placeholder="Type your telecommunications inquiry or select a scenario above..." autocomplete="off">
+            <button id="send-btn" class="btn btn-primary">
+              <span>Send Query</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Right Sidebar: Live Cognitive Trace & Guardrails Inspector -->
+        <aside class="agent-trace-panel glass-card">
+          <div class="panel-header">
+            <h3>Cognitive Reasoning DAG</h3>
+            <span class="badge badge-primary" id="trace-step-counter">0 Steps</span>
+          </div>
+
+          <div class="trace-summary-metrics">
+            <div class="trace-metric-item">
+              <span class="metric-key">Intent:</span>
+              <span class="metric-val" id="trace-intent">-</span>
+            </div>
+            <div class="trace-metric-item">
+              <span class="metric-key">Sentiment / Velocity:</span>
+              <span class="metric-val" id="trace-sentiment">-</span>
+            </div>
+            <div class="trace-metric-item">
+              <span class="metric-key">Churn Risk ($\delta$):</span>
+              <span class="metric-val" id="trace-churn">-</span>
+            </div>
+            <div class="trace-metric-item">
+              <span class="metric-key">Cloud Routing:</span>
+              <span class="metric-val highlight" id="trace-cloud">-</span>
+            </div>
+            <div class="trace-metric-item">
+              <span class="metric-key">Guardrail Verdict:</span>
+              <span class="metric-val" id="trace-guardrail">-</span>
+            </div>
+          </div>
+
+          <div class="sub-section-title">Execution Steps & Tool Invocations:</div>
+          <div class="trace-steps-feed" id="trace-steps-container">
+            <div class="empty-trace-placeholder">Awaiting customer interaction...</div>
+          </div>
+
+          <div class="sub-section-title">Retrieved Knowledge Citations (Hybrid RAG):</div>
+          <div class="trace-rag-citations" id="trace-rag-container">
+            <div class="empty-trace-placeholder">No RAG contexts queried yet.</div>
+          </div>
+        </aside>
+
+      </div>
+    </section>
+
+    <!-- TAB 2: NETWORK OPERATIONS (NOC) -->
+    <section id="tab-noc" class="tab-pane">
+      <div class="noc-grid">
+        
+        <!-- Left: Network Topology Map & Sector Status -->
+        <div class="glass-card noc-topology-card">
+          <div class="panel-header">
+            <h3>Cell Tower & Fiber Backhaul Topology (GraphRAG)</h3>
+            <button class="btn btn-outline btn-sm" id="refresh-topology-btn">Refresh Graph</button>
+          </div>
+          <div class="topology-canvas-container" id="topology-visualizer">
+            <!-- Rendered network node cards -->
+          </div>
+        </div>
+
+        <!-- Right: Active Alarms & Diagnostic Console -->
+        <div class="glass-card noc-diagnostic-card">
+          <div class="panel-header">
+            <h3>Real-Time Alarm Telemetry & OTDR Tools</h3>
+            <span class="badge badge-danger">CRITICAL ALARM ACTIVE</span>
+          </div>
+
+          <div class="active-alarms-container" id="active-alarms-list">
+            <!-- Populated via app.js -->
+          </div>
+
+          <div class="diagnostic-actions-box">
+            <h4>Live OSS Diagnostic Trigger Tools</h4>
+            <div class="action-buttons-row">
+              <button class="btn btn-accent" id="trigger-otdr-btn">
+                🔬 Execute OTDR Fiber Pulse Test
+              </button>
+              <button class="btn btn-warning" id="trigger-hss-reset-btn">
+                🔄 Soft Reset UDM/HSS Packet Core
+              </button>
+            </div>
+            <div class="diagnostic-output-box" id="diagnostic-output-console">
+              <pre>Select an OSS diagnostic tool above to execute real-time line reflection analysis.</pre>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- TAB 3: HYBRID CLOUD & ARBITRAGE -->
+    <section id="tab-hybrid" class="tab-pane">
+      <div class="metrics-grid">
+        
+        <div class="glass-card metric-card">
+          <div class="card-icon">🏢</div>
+          <h4>OpenStack On-Premises Plane</h4>
+          <p class="card-desc">Predictable 24/7/365 baseline inference, PII enclaves, and local OSS/BSS connectors.</p>
+          <div class="metric-giant" id="hybrid-openstack-pct">75.0%</div>
+          <span class="metric-sub">Workload Routed (Zero variable token cost)</span>
+        </div>
+
+        <div class="glass-card metric-card">
+          <div class="card-icon">☁️</div>
+          <h4>GCP Elastic Burst & Frontier</h4>
+          <p class="card-desc">GKE Autopilot burst during outages + Vertex AI Gemini for frontier multimodal reasoning.</p>
+          <div class="metric-giant" id="hybrid-gcp-pct">25.0%</div>
+          <span class="metric-sub">GKE Burst & Vertex AI Invocations</span>
+        </div>
+
+        <div class="glass-card metric-card">
+          <div class="card-icon">💰</div>
+          <h4>Cumulative Cost Arbitrage Savings</h4>
+          <p class="card-desc">Financial OpEx saved vs running 100% on public frontier APIs.</p>
+          <div class="metric-giant text-accent" id="hybrid-savings-val">$482.40</div>
+          <span class="metric-sub">Net Cost Reduction: <strong>81.4%</strong></span>
+        </div>
+
+        <div class="glass-card metric-card">
+          <div class="card-icon">⏱️</div>
+          <h4>Latency Profile (P95 / TTFT)</h4>
+          <p class="card-desc">Low-latency SLA guarantee across hybrid interconnect.</p>
+          <div class="metric-giant text-info">185 ms</div>
+          <span class="metric-sub">Time to First Token (TTFT) | P95: 310ms</span>
+        </div>
+
+      </div>
+
+      <!-- Token Economics Table -->
+      <div class="glass-card full-width-card">
+        <div class="panel-header">
+          <h3>Token Economics & Workload Placement Matrix</h3>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Workload Tier</th>
+              <th>Infrastructure Host</th>
+              <th>Engine / Model</th>
+              <th>Cost per 1K Tokens</th>
+              <th>Target Latency</th>
+              <th>Operational Rationale</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="badge badge-primary">Baseline Inference</span></td>
+              <td>OpenStack Private Cloud</td>
+              <td>Llama-3.1-70B-Instruct (vLLM INT4)</td>
+              <td>$0.00012 (Amortized HW)</td>
+              <td>&lt; 100 ms</td>
+              <td>Predictable 24/7 baseline traffic; zero marginal token billing.</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-accent">Peak Outage Surge</span></td>
+              <td>Google Cloud (GKE Autopilot)</td>
+              <td>Mistral-70B Cloud GPU cluster</td>
+              <td>$0.00085</td>
+              <td>&lt; 200 ms</td>
+              <td>Elastic burst handles 1,000% call surges during fiber cuts.</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-warning">Frontier / Multimodal</span></td>
+              <td>Google Cloud (Vertex AI)</td>
+              <td>Gemini 1.5 Flash / Pro</td>
+              <td>$0.00125 / $0.00375</td>
+              <td>&lt; 350 ms</td>
+              <td>Reserved for complex multi-intent planning and photo diagnostics.</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-outline">Analytical Lakehouse</span></td>
+              <td>Google Cloud (BigQuery)</td>
+              <td>Partitioned Lakehouse Sink</td>
+              <td>$0.02 / GB Query</td>
+              <td>Async stream</td>
+              <td>Permanent non-repudiation audit trails & drift analysis.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TAB 4: MLOPS DRIFT & SELF-HEALING -->
+    <section id="tab-mlops" class="tab-pane">
+      <div class="mlops-grid">
+        
+        <!-- Left: Drift Monitors -->
+        <div class="glass-card mlops-drift-card">
+          <div class="panel-header">
+            <h3>Multi-Dimensional Statistical Drift Telemetry</h3>
+            <button class="btn btn-primary btn-sm" id="run-drift-check-btn">Run Drift Inspection</button>
+          </div>
+
+          <div class="drift-indicators-grid">
+            <div class="drift-box">
+              <span class="drift-title">Input Data Drift (PSI)</span>
+              <div class="drift-value" id="drift-psi-val">PSI: 0.042</div>
+              <span class="drift-status status-healthy" id="drift-psi-status">HEALTHY (&lt; 0.20)</span>
+            </div>
+            <div class="drift-box">
+              <span class="drift-title">Two-Sample K-S Test</span>
+              <div class="drift-value" id="drift-ks-val">p-value: 0.684</div>
+              <span class="drift-status status-healthy" id="drift-ks-status">NO SHIFT (p &gt; 0.05)</span>
+            </div>
+            <div class="drift-box">
+              <span class="drift-title">Concept Drift ($\Delta_{\text{drift}}$)</span>
+              <div class="drift-value" id="drift-concept-val">$\Delta$: 0.081</div>
+              <span class="drift-status status-healthy" id="drift-concept-status">STABLE (&lt; 0.25)</span>
+            </div>
+            <div class="drift-box">
+              <span class="drift-title">RAG Alignment Ratio</span>
+              <div class="drift-value" id="drift-rag-val">Ratio: 96.8%</div>
+              <span class="drift-status status-healthy" id="drift-rag-status">HEALTHY (&gt; 85%)</span>
+            </div>
+          </div>
+
+          <div class="sub-section-title">Automated Drift Mitigation Console:</div>
+          <div class="self-healing-trigger-box">
+            <p>If vocabulary shift or tool spikes occur, the Self-Healing Engine dynamically rebalances RRF retrieval weights (dense vs lexical) and throttles anomalous integrations.</p>
+            <button class="btn btn-accent" id="trigger-heal-btn">⚡ Trigger Automated Self-Healing Cycle</button>
+            <div class="healing-action-feed" id="healing-actions-log">
+              <p class="empty-placeholder">No self-healing interventions active. System operating in optimal nominal state.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Model Registry & Fine-Tuning Pipeline -->
+        <div class="glass-card mlops-registry-card">
+          <div class="panel-header">
+            <h3>Model Registry & Canary Deployment Status</h3>
+          </div>
+          <div class="registry-table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Model Version</th>
+                  <th>Target Plane</th>
+                  <th>Intent F1</th>
+                  <th>Hallucination</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="models-table-body">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+
+          <div class="sub-section-title">Continuous Fine-Tuning (PEFT/LoRA + DPO):</div>
+          <div class="lora-spec-box">
+            <div class="code-block">
+              <strong>LoRA Parameters:</strong> Rank r=16 | Alpha α=32 | Dropout 0.05<br>
+              <strong>Target Modules:</strong> q_proj, k_proj, v_proj, o_proj<br>
+              <strong>DPO Alignment Dataset:</strong> 10,000+ curated gold interaction pairs
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- TAB 5: UNIFIED 6-CATEGORY METRICS -->
+    <section id="tab-metrics" class="tab-pane">
+      <div class="metrics-sections-container">
+        
+        <!-- Category 1: Business Metrics -->
+        <div class="glass-card metric-section-block">
+          <div class="section-badge badge-primary">Category 1</div>
+          <h3>Business & Operational Excellence Metrics</h3>
+          <div class="metrics-kpi-row">
+            <div class="kpi-cell">
+              <span class="kpi-num" id="metric-fcr">88.5%</span>
+              <span class="kpi-lbl">First Contact Resolution (FCR)</span>
+            </div>
+            <div class="kpi-cell">
+              <span class="kpi-num" id="metric-aht">42.5s</span>
+              <span class="kpi-lbl">Average Handling Time (AHT)</span>
+            </div>
+            <div class="kpi-cell">
+              <span class="kpi-num" id="metric-deflection">88.5%</span>
+              <span class="kpi-lbl">Agent Deflection Rate</span>
+            </div>
+            <div class="kpi-cell">
+              <span class="kpi-num text-accent" id="metric-csat">4.62 / 5</span>
+              <span class="kpi-lbl">Customer CSAT</span>
+            </div>
+            <div class="kpi-cell">
+              <span class="kpi-num" id="metric-cpi">$0.84</span>
+              <span class="kpi-lbl">Cost Per Interaction (CPI)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Category 2: System & Infrastructure Metrics -->
+        <div class="glass-card metric-section-block">
+          <div class="section-badge badge-accent">Category 2</div>
+          <h3>System & Infrastructure Performance Metrics</h3>
+          <div class="metrics-kpi-row">
+            <div class="kpi-cell">
+              <span class="kpi-num text-info" id="metric-ttft">185 ms</span>
+              <span class="kpi-lbl">Time to First Token (TTFT)</span>
+            </div>
+            <div class="kpi-cell">
+              <span class="kpi-num" id="metric-itl">18.4 ms</span>
+              <span class="kpi-lbl">Inter-Token Latency (ITL)</span>
+            </div>
+            <div class="kpi-cell">
+              <span class="kpi-num" id="metric-p95">310.5 ms</span>
+              <span class="kpi-lbl">P95 End-to-End Latency</span>
+            </div>
+            <div class="kpi-cell">
+              <span class="kpi-num" id="metric-throughput">245.8</span>
+              <span class="kpi-lbl">Tokens / Second / Host</span>
+            </div>
+            <div class="kpi-cell">
+              <span class="kpi-num" id="metric-gpu">76.4%</span>
+              <span class="kpi-lbl">GPU VRAM Utilization</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Category 3: RAG Retrieval Metrics -->
+        <div class="glass-card metric-section-block">
+          <div class="section-badge badge-warning">Category 3</div>
+          <h3>RAG System Retrieval & Groundedness Metrics</h3>
+          <div class="metrics-kpi-row">
+            <div class="kpi-cell">
+              <span class="kpi-num" id="metric-rag-prec">91.4%</span>
+              <span class="kpi-lbl">Context Precision</span>
+            </div>
+            <div class="kpi-cell">
+              <span class="kpi-num" id="metric-rag-rec">88.6%</span>
+              <span class="kpi-lbl">Context Recall</span>
+            </div>
+            <div class="kpi-cell">
+              <span class="kpi-num text-accent" id="metric-rag-faith">96.2%</span>
+              <span class="kpi-lbl">Faithfulness (Groundedness)</span>
+            </div>
+            <div class="kpi-cell">
+              <span class="kpi-num" id="metric-rag-relev">93.8%</span>
+              <span class="kpi-lbl">Answer Relevance</span>
+            </div>
+            <div class="kpi-cell">
+              <span class="kpi-num" id="metric-rag-halluc">1.4%</span>
+              <span class="kpi-lbl">Hallucination Frequency</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Category 4: Agentic Reasoning Metrics -->
+        <div class="glass-card metric-section-block">
+          <div class="section-badge badge-primary">Category 4</div>
+          <h3>Agentic Reasoning & Trajectory Optimality</h3>
+          <div class="metrics-kpi-row">
+            <div class="kpi-cell">
+              <span class="kpi-num" id="metric-agent-eff">91.2%</span>
+              <span class="kpi-lbl">Path Efficiency ($\eta = K^*/K$)</span>
+            </div>
+            <div class="kpi-cell">
+              <span class="kpi-num text-accent" id="metric-agent-tisr">98.6%</span>
+              <span class="kpi-lbl">Tool Success Rate (TISR)</span>
+            </div>
+            <div class="kpi-cell">
+              <span class="kpi-num" id="metric-agent-replan">4.2%</span>
+              <span class="kpi-lbl">Re-Planning Rate</span>
+            </div>
+            <div class="kpi-cell">
+              <span class="kpi-num" id="metric-agent-gcr">96.8%</span>
+              <span class="kpi-lbl">Goal Completion Rate (GCR)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Category 5: Classical ML & NLP Metrics -->
+        <div class="glass-card metric-section-block">
+          <div class="section-badge badge-info">Category 5</div>
+          <h3>Classical Machine Learning & NLP Metrics</h3>
+          <div class="metrics-kpi-row">
+            <div class="kpi-cell">
+              <span class="kpi-num" id="metric-ml-intent">0.942</span>
+              <span class="kpi-lbl">Intent Macro $F_1$-Score</span>
+            </div>
+            <div class="kpi-cell">
+              <span class="kpi-num" id="metric-ml-ner">0.965</span>
+              <span class="kpi-lbl">NER Token-Level $F_1$</span>
+            </div>
+            <div class="kpi-cell">
+              <span class="kpi-num" id="metric-ml-wer">4.8%</span>
+              <span class="kpi-lbl">ASR Word Error Rate (WER)</span>
+            </div>
+            <div class="kpi-cell">
+              <span class="kpi-num text-accent" id="metric-ml-churn">0.926</span>
+              <span class="kpi-lbl">Churn Predictor ROC-AUC</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- TAB 6: HITL ESCALATION QUEUE -->
+    <section id="tab-hitl" class="tab-pane">
+      <div class="glass-card full-width-card">
+        <div class="panel-header">
+          <h3>Tier-2 / Tier-3 Human-In-The-Loop Escalation Queue</h3>
+          <span class="badge badge-warning">Active Audit & Representative Override</span>
+        </div>
+
+        <div class="hitl-queue-container" id="hitl-queue-list">
+          <!-- Populated via app.js -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- External Script -->
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
