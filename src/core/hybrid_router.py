@@ -1,8 +1,8 @@
 """Hybrid Cloud Workload Placement & Cost Arbitrage Engine (OpenStack + GCP)."""
 
-import time
+import threading
 from enum import Enum
-from typing import Dict, Any, Tuple
+from typing import Dict, Any
 from pydantic import BaseModel
 from src.core.config import settings
 from src.core.logging import get_logger
@@ -40,6 +40,10 @@ class HybridCloudRouter:
         self.total_gcp_vertex_routed: int = 0
         self.total_gcp_burst_routed: int = 0
         self.cumulative_savings_usd: float = 0.0
+        self.total_tokens_routed: int = 0
+        self.cumulative_actual_cost_usd: float = 0.0
+        self.cumulative_cloud_benchmark_cost_usd: float = 0.0
+        self._lock = threading.Lock()
 
     def route_inference(
         self,
@@ -49,12 +53,18 @@ class HybridCloudRouter:
         is_multimodal: bool = False,
         is_surge: bool = False,
         is_high_complexity: bool = False,
+        contains_pii: bool = False,
     ) -> ExecutionRoutingDecision:
-        """Determine optimal execution provider maximizing throughput, minimizing latency and token cost."""
+        """Determine optimal execution provider maximizing throughput, minimizing latency and token cost.
+
+        ``contains_pii`` enforces data residency (spec 11.1): sessions in which CPNI/PII was detected stay on the
+        on-premises OpenStack boundary even when they are complex enough to otherwise burst to the public cloud.
+        """
         total_tokens = input_tokens + output_tokens
+        benchmark_cloud_cost = (input_tokens / 1000.0 * self.gcp_vertex_input_cost) + (output_tokens / 1000.0 * self.gcp_vertex_output_cost)
 
         # 1. Multi-modal queries (e.g., router LED photos) or extreme multi-intent synthesis -> GCP Vertex AI
-        if is_multimodal or (is_high_complexity and not is_surge):
+        if is_multimodal or (is_high_complexity and not is_surge and not contains_pii):
             provider = CloudProvider.GCP_VERTEX
             model_name = settings.gcp_vertex_ai_model
             target_endpoint = f"https://{settings.gcp_region}-aiplatform.googleapis.com/v1"
@@ -62,7 +72,6 @@ class HybridCloudRouter:
             est_latency = 320.0
             cost = (input_tokens / 1000.0 * self.gcp_vertex_input_cost) + (output_tokens / 1000.0 * self.gcp_vertex_output_cost)
             savings = 0.0
-            self.total_gcp_vertex_routed += 1
 
         # 2. Localized network outage surge (> 400% baseline traffic) -> GCP GKE Autopilot Burst
         elif is_surge:
@@ -72,10 +81,7 @@ class HybridCloudRouter:
             rationale = "Traffic surge detected; cloud burst execution via GCP GKE Autopilot"
             est_latency = 180.0
             cost = (total_tokens / 1000.0) * self.gcp_gke_cost
-            benchmark_cloud_cost = (input_tokens / 1000.0 * self.gcp_vertex_input_cost) + (output_tokens / 1000.0 * self.gcp_vertex_output_cost)
             savings = max(0.0, benchmark_cloud_cost - cost)
-            self.total_gcp_burst_routed += 1
-            self.cumulative_savings_usd += savings
 
         # 3. Predictable baseline conversational queries & worker sub-agents -> OpenStack on-premises vLLM
         else:
@@ -85,10 +91,19 @@ class HybridCloudRouter:
             rationale = "Predictable baseline query routed to OpenStack on-premises vLLM (Zero variable token cost)"
             est_latency = 95.0
             cost = (total_tokens / 1000.0) * self.openstack_baseline_cost
-            benchmark_cloud_cost = (input_tokens / 1000.0 * self.gcp_vertex_input_cost) + (output_tokens / 1000.0 * self.gcp_vertex_output_cost)
             savings = max(0.0, benchmark_cloud_cost - cost)
-            self.total_openstack_routed += 1
+
+        with self._lock:  # one critical section for all counters (handlers run in a thread pool)
+            if provider == CloudProvider.GCP_VERTEX:
+                self.total_gcp_vertex_routed += 1
+            elif provider == CloudProvider.GCP_GKE_BURST:
+                self.total_gcp_burst_routed += 1
+            else:
+                self.total_openstack_routed += 1
             self.cumulative_savings_usd += savings
+            self.total_tokens_routed += total_tokens
+            self.cumulative_actual_cost_usd += cost
+            self.cumulative_cloud_benchmark_cost_usd += benchmark_cloud_cost
 
         decision = ExecutionRoutingDecision(
             provider=provider,
@@ -117,6 +132,9 @@ class HybridCloudRouter:
             "gcp_burst_count": self.total_gcp_burst_routed,
             "gcp_total_percentage": round(gcp_pct, 2),
             "cumulative_arbitrage_savings_usd": round(self.cumulative_savings_usd, 4),
+            "total_tokens_routed": self.total_tokens_routed,
+            "cumulative_actual_cost_usd": round(self.cumulative_actual_cost_usd, 6),
+            "cumulative_cloud_benchmark_cost_usd": round(self.cumulative_cloud_benchmark_cost_usd, 6),
             "openstack_baseline_cost_per_1k": self.openstack_baseline_cost,
             "gcp_vertex_input_cost_per_1k": self.gcp_vertex_input_cost,
         }

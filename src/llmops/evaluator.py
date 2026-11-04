@@ -1,5 +1,6 @@
 """LLMOps Evaluation & Regression Testing Engine (Pipeline 4)."""
 
+import hashlib
 import re
 from typing import Dict, List, Any, Optional
 from pydantic import BaseModel, Field
@@ -67,7 +68,7 @@ class LLMOpsEvaluator:
         passed = (faithfulness >= 0.70) and (precision >= 0.50) and (path_eff >= 0.50)
 
         return EvaluationReport(
-            test_id=f"EVAL-{hash(query) % 100000}",
+            test_id="EVAL-" + hashlib.sha1(query.encode("utf-8")).hexdigest()[:8].upper(),
             context_precision=precision,
             context_recall=recall,
             faithfulness=faithfulness,

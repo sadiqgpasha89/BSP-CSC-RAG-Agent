@@ -1,0 +1,16 @@
+[
+  {
+    "id": "KB-TAR-LEGACY-2018-001",
+    "title": "Legacy Freedom Unlimited Plan (2018 Grandfathered)",
+    "plan_code": "FREEDOM_UNLIMITED_2018",
+    "category": "mobile_postpaid",
+    "valid_from": "2018-01-01",
+    "valid_to": "2019-12-31",
+    "is_legacy": true,
+    "monthly_fee_usd": 50.00,
+    "data_allowance": "Unlimited 4G LTE on-device data; subject to network deprioritization during cell congestion after 22GB",
+    "tethering_hotspot": "Strict 10GB high-speed mobile hotspot limit per billing cycle; hard cutoff upon reaching 10GB with zero rollover. Additional hotspot requires $15/5GB legacy add-on.",
+    "roaming_included": "Domestic voice and text only; international roaming billed at standard pay-per-use rates ($2.05/MB, $0.50/min)",
+    "grandfathered_notes": "Contractual lock: Customers retaining this plan cannot transfer tethering quota to another line and cannot receive modern 5G hotspot allowances without full migration to 5G Ultra Max."
+  }
+]

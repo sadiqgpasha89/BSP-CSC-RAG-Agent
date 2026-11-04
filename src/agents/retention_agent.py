@@ -3,6 +3,7 @@
 import time
 from typing import Dict, Any
 from src.agents.state import AgenticSessionState
+from src.core.config import settings
 from src.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -17,7 +18,7 @@ class RetentionAgent:
         """Formulate bounded retention concession to avert subscriber cancellation."""
         start_time = time.perf_counter()
         sub_id = state.subscriber_id
-        clv_usd = state.blackboard.get("clv_usd", 2500.00)
+        clv_usd = float(state.blackboard.get("clv_usd", 1500.00))
         churn_risk = state.churn_risk_score
 
         # Bound retention concession based on CLV and churn probability
@@ -32,11 +33,22 @@ class RetentionAgent:
             financial_value_usd = 30.00
             retained_prob_lift = 0.45
 
+        # Retention concessions are financial commitments and obey the same fiscal ceiling as billing credits:
+        # anything above the autonomous limit is *proposed*, not granted, until a supervisor approves it.
+        requires_approval = financial_value_usd > settings.max_refund_autonomous
+        if requires_approval:
+            state.escalate(
+                f"Retention concession worth ${financial_value_usd:.2f} exceeds autonomous limit "
+                f"(${settings.max_refund_autonomous:.2f}); supervisor approval required"
+            )
+
         expected_clv_saved = round(clv_usd * retained_prob_lift, 2)
         duration_ms = (time.perf_counter() - start_time) * 1000.0
 
         tool_output = {
+            "success": True,
             "subscriber_id": sub_id,
+            "requires_supervisor_approval": requires_approval,
             "churn_risk_observed": churn_risk,
             "clv_usd": clv_usd,
             "offer_title": offer_title,

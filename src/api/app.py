@@ -1,16 +1,16 @@
 """FastAPI Application Entrypoint for Enterprise Telco Agentic System."""
 
-import os
 from pathlib import Path
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse
 
+from src.api.routes import chat, hitl, metrics, mlops, network, rag
 from src.core.config import settings
 from src.core.logging import configure_logging, get_logger
-from src.api.routes import chat, network, hitl, mlops, rag, metrics
 
 configure_logging(settings.log_level)
 logger = get_logger("enterprise.telco.api")
@@ -21,13 +21,14 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# Cross-Origin Resource Sharing (CORS)
+# Cross-Origin Resource Sharing: an explicit allow-list. The previous wildcard origin combined with
+# allow_credentials=True lets any website drive the API with a visitor's credentials.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type", "X-API-Key"],
 )
 
 # Static files and Templates
@@ -50,6 +51,13 @@ app.include_router(rag.router, prefix=API_V1_PREFIX)
 app.include_router(metrics.router, prefix=API_V1_PREFIX)
 
 
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Log the full error server-side; never reflect internals (paths, SQL, stack text) to the caller."""
+    logger.error("Unhandled API error", path=request.url.path, error=repr(exc))
+    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
+
+
 @app.get("/", response_class=HTMLResponse)
 async def serve_dashboard(request: Request):
     """Serve the interactive Telco Command Center web console."""
@@ -58,13 +66,19 @@ async def serve_dashboard(request: Request):
 
 @app.get(f"{API_V1_PREFIX}/health")
 def health_check():
-    """System health and readiness probe."""
+    """System health and readiness probe, reflecting actual configuration and loaded assets."""
+    from src.rag.bm25_engine import bm25_engine
+    from src.rag.vector_store import vector_store
+
+    knowledge_ready = vector_store._is_indexed and bm25_engine._is_indexed
     return {
-        "status": "HEALTHY",
+        "status": "HEALTHY" if knowledge_ready else "DEGRADED",
         "environment": settings.environment,
         "openstack_onprem_connected": settings.openstack_enabled,
         "gcp_connected": settings.gcp_enabled,
         "active_llm_baseline": "llama-3.1-70b-vllm",
         "active_llm_frontier": settings.gcp_vertex_ai_model,
-        "cpni_enclave_status": "ACTIVE",
+        "cpni_enclave_status": "ACTIVE" if settings.cpni_enclave_enabled else "DISABLED",
+        "knowledge_base_indexed": knowledge_ready,
+        "indexed_chunks": len(vector_store.chunks),
     }

@@ -26,11 +26,9 @@ class TemporalFilterEngine:
             logger.info("Applying strict temporal legacy filter for subscriber on FREEDOM_UNLIMITED_2018")
             return {"plan_code": "FREEDOM_UNLIMITED_2018"}
 
-        # If subscriber is on 2026 5G plan, exclude legacy grandfathered chunks
-        if subscriber_plan_code in ["5G_ULTRA_MAX_2026", "FIBER_GIGA_1G_2026"]:
-            return {"is_legacy": False}
-
-        return None
+        # Any other (modern or unknown) plan must never be shown grandfathered terms: exclude legacy chunks.
+        # Defaulting unknown plans to "unrestricted", as before, let legacy tariffs leak to unclassified accounts.
+        return {"is_legacy": False}
 
 
 temporal_filter_engine = TemporalFilterEngine()

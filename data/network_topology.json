@@ -1,0 +1,24 @@
+{
+  "nodes": [
+    {"id": "TOWER-101", "type": "cell_tower", "name": "Downtown Central 5G Core", "sector": "Sector-1", "coordinates": {"lat": 37.7749, "lon": -122.4194}, "status": "operational", "active_subscribers": 1420},
+    {"id": "TOWER-102", "type": "cell_tower", "name": "Financial District 5G Macro", "sector": "Sector-2", "coordinates": {"lat": 37.7915, "lon": -122.4010}, "status": "operational", "active_subscribers": 2180},
+    {"id": "TOWER-103", "type": "cell_tower", "name": "Mission District Small Cell", "sector": "Sector-3", "coordinates": {"lat": 37.7599, "lon": -122.4148}, "status": "operational", "active_subscribers": 950},
+    {"id": "TOWER-104", "type": "cell_tower", "name": "Sunset Residential 5G Tower", "sector": "Sector-7", "coordinates": {"lat": 37.7544, "lon": -122.4770}, "status": "critical_alarm", "active_subscribers": 3410},
+    {"id": "TOWER-105", "type": "cell_tower", "name": "Richmond Coastal Microcell", "sector": "Sector-8", "coordinates": {"lat": 37.7796, "lon": -122.4839}, "status": "operational", "active_subscribers": 840},
+    {"id": "ROUTER-BH-01", "type": "backhaul_router", "name": "Central Aggregation Juniper MX960", "location": "Central Office Core 1", "status": "operational"},
+    {"id": "ROUTER-BH-02", "type": "backhaul_router", "name": "Westside Fiber Ring Cisco ASR 9000", "location": "West Distribution Hub", "status": "fiber_cut_alert"},
+    {"id": "OLT-OPTICAL-01", "type": "optical_line_terminal", "name": "Nokia FX-8 GPON OLT", "location": "Sunset Distribution Enclave", "status": "line_fault_active"},
+    {"id": "CORE-BSS", "type": "bss_datacenter", "name": "Billing & Rating Engine Amdocs", "location": "OnPrem OpenStack DC", "status": "operational"},
+    {"id": "CORE-HSS-UDM", "type": "oss_datacenter", "name": "Ericsson 5G UDM / HSS Core", "location": "OnPrem OpenStack DC", "status": "operational"}
+  ],
+  "edges": [
+    {"source": "TOWER-101", "target": "ROUTER-BH-01", "relation": "connected_via_100g_fiber", "latency_ms": 0.4},
+    {"source": "TOWER-102", "target": "ROUTER-BH-01", "relation": "connected_via_100g_fiber", "latency_ms": 0.3},
+    {"source": "TOWER-103", "target": "ROUTER-BH-01", "relation": "connected_via_10g_microwave", "latency_ms": 1.2},
+    {"source": "TOWER-104", "target": "ROUTER-BH-02", "relation": "connected_via_40g_fiber", "latency_ms": 85.4},
+    {"source": "TOWER-105", "target": "ROUTER-BH-02", "relation": "connected_via_10g_fiber", "latency_ms": 4.1},
+    {"source": "ROUTER-BH-02", "target": "OLT-OPTICAL-01", "relation": "interconnect_trunk", "latency_ms": 120.0},
+    {"source": "ROUTER-BH-01", "target": "CORE-BSS", "relation": "management_mpls_vpn", "latency_ms": 0.2},
+    {"source": "ROUTER-BH-01", "target": "CORE-HSS-UDM", "relation": "signaling_diameter_http2", "latency_ms": 0.2}
+  ]
+}

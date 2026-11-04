@@ -2,7 +2,7 @@
 
 from typing import List, Optional
 from fastapi import APIRouter
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from src.rag.hybrid_retriever import hybrid_retriever, RetrievalResult
 from src.data_engineering.graph_rag_builder import graph_builder
 
@@ -10,9 +10,9 @@ router = APIRouter(prefix="/rag", tags=["Hybrid RAG & Knowledge Graph"])
 
 
 class RAGSearchRequest(BaseModel):
-    query: str
-    subscriber_plan_code: Optional[str] = None
-    top_k: int = 5
+    query: str = Field(min_length=1, max_length=1000)
+    subscriber_plan_code: Optional[str] = Field(default=None, max_length=64)
+    top_k: int = Field(default=5, ge=1, le=20)
 
 
 @router.post("/search", response_model=List[RetrievalResult])

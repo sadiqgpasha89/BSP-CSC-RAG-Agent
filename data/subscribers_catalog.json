@@ -1,0 +1,118 @@
+[
+  {
+    "subscriber_id": "SUB-882194",
+    "msisdn": "+1-415-555-0199",
+    "name": "Alex Mercer",
+    "tier": "enterprise_platinum",
+    "plan_code": "5G_ULTRA_MAX_2026",
+    "contract_start_date": "2026-01-15",
+    "monthly_rate_usd": 75.0,
+    "assigned_sector": "Sector-7",
+    "current_tower_id": "TOWER-104",
+    "tenure_months": 42,
+    "clv_usd": 3150.0,
+    "churn_risk": 0.82,
+    "billing_status": "disputed_unpaid",
+    "unbilled_usage_usd": 38.5,
+    "last_bill_amount_usd": 124.5,
+    "recent_disputes_count": 2,
+    "active_equipment": {
+      "imei": "354891092837192",
+      "iccid": "8901410321112349812",
+      "model": "Apple iPhone 16 Pro Max",
+      "esim_capable": true
+    },
+    "recent_tickets": [
+      {
+        "ticket_id": "TCK-9901",
+        "created_at": "2026-09-02",
+        "category": "billing",
+        "summary": "Disputed $30 roaming charge while travelling",
+        "status": "resolved"
+      }
+    ]
+  },
+  {
+    "subscriber_id": "SUB-102948",
+    "msisdn": "+1-415-555-0288",
+    "name": "Elena Rostova",
+    "tier": "legacy_consumer",
+    "plan_code": "FREEDOM_UNLIMITED_2018",
+    "contract_start_date": "2018-05-10",
+    "monthly_rate_usd": 50.0,
+    "assigned_sector": "Sector-1",
+    "current_tower_id": "TOWER-101",
+    "tenure_months": 98,
+    "clv_usd": 4900.0,
+    "churn_risk": 0.15,
+    "billing_status": "current_paid",
+    "unbilled_usage_usd": 0.0,
+    "last_bill_amount_usd": 50.0,
+    "recent_disputes_count": 0,
+    "active_equipment": {
+      "imei": "864902039182736",
+      "iccid": "8901410320984716253",
+      "model": "Google Pixel 8 Pro",
+      "esim_capable": true
+    },
+    "recent_tickets": []
+  },
+  {
+    "subscriber_id": "SUB-449182",
+    "msisdn": "+1-415-555-0377",
+    "name": "Marcus Vance",
+    "tier": "broadband_home_vip",
+    "plan_code": "FIBER_GIGA_1G_2026",
+    "contract_start_date": "2026-02-01",
+    "monthly_rate_usd": 65.0,
+    "assigned_sector": "Sector-7",
+    "current_tower_id": "TOWER-104",
+    "tenure_months": 8,
+    "clv_usd": 780.0,
+    "churn_risk": 0.45,
+    "billing_status": "current_paid",
+    "unbilled_usage_usd": 0.0,
+    "last_bill_amount_usd": 65.0,
+    "recent_disputes_count": 1,
+    "active_equipment": {
+      "serial_number": "GW-AX6000-SF-9921",
+      "model": "Telco GigaWave Wi-Fi 6E Gateway (GW-AX6000)",
+      "olt_port": "OLT-OPTICAL-01/PON-04"
+    },
+    "recent_tickets": [
+      {
+        "ticket_id": "TCK-8812",
+        "created_at": "2026-08-14",
+        "category": "network",
+        "summary": "Intermittent Wi-Fi dropping in evening",
+        "status": "resolved"
+      }
+    ],
+    "olt_port": "OLT-OPTICAL-01/PON-04"
+  },
+  {
+    "subscriber_id": "SUB-773019",
+    "msisdn": "+1-415-555-0466",
+    "name": "David Chen",
+    "tier": "standard_consumer",
+    "plan_code": "5G_ULTRA_MAX_2026",
+    "contract_start_date": "2026-03-20",
+    "monthly_rate_usd": 75.0,
+    "assigned_sector": "Sector-2",
+    "current_tower_id": "TOWER-102",
+    "tenure_months": 6,
+    "clv_usd": 450.0,
+    "churn_risk": 0.22,
+    "billing_status": "current_paid",
+    "unbilled_usage_usd": 5.0,
+    "last_bill_amount_usd": 80.0,
+    "recent_disputes_count": 0,
+    "active_equipment": {
+      "imei": "359812048172641",
+      "iccid": "8901410321554629810",
+      "model": "Samsung Galaxy S24 Ultra",
+      "esim_capable": true
+    },
+    "recent_tickets": []
+  }
+]

@@ -2,14 +2,18 @@
 
 import re
 import time
-from typing import Dict, Tuple, List
+from typing import Dict, List, Tuple
+
 from pydantic import BaseModel, Field
+
 from src.core.logging import get_logger
 
 logger = get_logger(__name__)
 
 
 class PIIScrubResult(BaseModel):
+    # NOTE: ``original_text`` and ``token_map`` hold raw PII. They must stay inside the enclave: never log,
+    # persist or serialise this model to a client; only ``masked_text`` may leave.
     original_text: str
     masked_text: str
     token_map: Dict[str, str] = Field(default_factory=dict)
@@ -20,70 +24,48 @@ class PIIScrubResult(BaseModel):
 class PIIScrubber:
     """High-throughput regex and heuristic PII/CPNI sanitizer for telecommunications ingress streams."""
 
-    # Pre-compiled high-performance patterns
-    PATTERNS = {
-        "CREDIT_CARD": re.compile(r"\b(?:\d{4}[ -]?){3}\d{4}\b"),
-        "SSN": re.compile(r"\b\d{3}-\d{2}-\d{4}\b"),
-        "MSISDN": re.compile(r"\b(?:\+?1[-. ]?)?(?:\([2-9]\d{2}\)|[2-9]\d{2})[-. ]?[2-9]\d{2}[-. ]?\d{4}\b"),
-        "IMEI": re.compile(r"\b\d{15}\b"),
-        "ICCID": re.compile(r"\b89\d{16,18}\b"),
-        "PASSWORD_PIN": re.compile(r"(?i)\b(?:pin|password|passcode|secret)(?:\s+(?:pin|code|number|is|key))*[\s:=]+([A-Za-z0-9@#$%^&*]{4,16})\b"),
-    }
+    # Pre-compiled high-performance patterns. Order matters: most specific / longest numeric identifiers first so a
+    # 16-digit card is never partially consumed by the 15-digit IMEI rule.
+    PATTERNS: List[Tuple[str, "re.Pattern[str]"]] = [
+        ("CREDIT_CARD", re.compile(r"\b(?:\d{4}[ -]?){3}\d{4}\b")),
+        ("SSN", re.compile(r"\b\d{3}-\d{2}-\d{4}\b")),
+        ("ICCID", re.compile(r"\b89\d{16,18}\b")),
+        ("IMEI", re.compile(r"\b\d{15}\b")),
+        # Lookarounds instead of \b: "\b" never matches before "(" or "+", so "(415) 555-0199" and "+1-415-..."
+        # were previously missed / only partially masked.
+        ("MSISDN", re.compile(r"(?<![\w<])(?:\+?1[-. ]?)?(?:\([2-9]\d{2}\)|[2-9]\d{2})[-. ]?[2-9]\d{2}[-. ]?\d{4}(?![\w>])")),
+    ]
+    PIN_PATTERN = re.compile(
+        r"(?i)\b(?:pin|password|passcode|secret)(?:\s+(?:pin|code|number|is|key))*[\s:=]+([A-Za-z0-9@#$%^&*]{4,16})\b"
+    )
 
     def mask(self, text: str) -> PIIScrubResult:
         """Sanitize text by replacing sensitive PII/CPNI entities with deterministic pseudonyms."""
         start_time = time.perf_counter()
         token_map: Dict[str, str] = {}
+        counter = 0
         masked_text = text
-        counter = 1
 
-        # 1. Credit Cards
-        for match in self.PATTERNS["CREDIT_CARD"].finditer(text):
-            val = match.group(0)
-            token = f"<CREDIT_CARD_{counter}>"
-            masked_text = masked_text.replace(val, token)
-            token_map[token] = val
-            counter += 1
-
-        # 2. SSN / National IDs
-        for match in self.PATTERNS["SSN"].finditer(masked_text):
-            val = match.group(0)
-            token = f"<SSN_{counter}>"
-            masked_text = masked_text.replace(val, token)
-            token_map[token] = val
-            counter += 1
-
-        # 3. ICCID
-        for match in self.PATTERNS["ICCID"].finditer(masked_text):
-            val = match.group(0)
-            token = f"<ICCID_{counter}>"
-            masked_text = masked_text.replace(val, token)
-            token_map[token] = val
-            counter += 1
-
-        # 4. IMEI
-        for match in self.PATTERNS["IMEI"].finditer(masked_text):
-            val = match.group(0)
-            token = f"<IMEI_{counter}>"
-            masked_text = masked_text.replace(val, token)
-            token_map[token] = val
-            counter += 1
-
-        # 5. MSISDN (Phone numbers)
-        for match in self.PATTERNS["MSISDN"].finditer(masked_text):
-            val = match.group(0)
-            if not val.startswith("<"):
-                token = f"<MSISDN_{counter}>"
-                masked_text = masked_text.replace(val, token)
-                token_map[token] = val
+        for label, pattern in self.PATTERNS:
+            def _sub(match: "re.Match[str]", label: str = label) -> str:
+                nonlocal counter
                 counter += 1
+                token = f"<{label}_{counter}>"
+                token_map[token] = match.group(0)
+                return token
 
-        # 6. Password / PIN
-        for match in self.PATTERNS["PASSWORD_PIN"].finditer(masked_text):
-            val = match.group(1)
-            token = f"<PIN_REDACTED>"
-            masked_text = masked_text.replace(val, token)
-            token_map[token] = val
+            # Single-pass substitution (rather than str.replace of the matched value, which also rewrote
+            # unrelated occurrences of the same digits and could corrupt previously inserted tokens).
+            masked_text = pattern.sub(_sub, masked_text)
+
+        def _pin_sub(match: "re.Match[str]") -> str:
+            nonlocal counter
+            counter += 1
+            token = "<PIN_REDACTED>" if "<PIN_REDACTED>" not in token_map else f"<PIN_REDACTED_{counter}>"
+            token_map[token] = match.group(1)
+            return match.group(0).replace(match.group(1), token)
+
+        masked_text = self.PIN_PATTERN.sub(_pin_sub, masked_text)
 
         elapsed_ms = (time.perf_counter() - start_time) * 1000.0
 

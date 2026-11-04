@@ -1,7 +1,7 @@
 """Sentiment Triage & Frustration Velocity Engine (Stage 2)."""
 
 import re
-from typing import List, Dict, Any, Tuple
+from typing import List, Optional
 from pydantic import BaseModel, Field
 
 
@@ -28,7 +28,7 @@ class SentimentAnalyzer:
         "resolved": 0.75, "helpful": 0.7, "fast": 0.6, "wonderful": 0.85,
     }
 
-    def analyze(self, text: str, historical_turn_sentiments: List[float] = None) -> SentimentResult:
+    def analyze(self, text: str, historical_turn_sentiments: Optional[List[float]] = None) -> SentimentResult:
         """Compute single utterance sentiment and multi-turn velocity."""
         words = re.findall(r"\b\w+\b", text.lower())
         if not words:

@@ -1,7 +1,7 @@
 """Classical Machine Learning & NLP Metrics (Section 8.5)."""
 
-from typing import Dict, Any
-from pydantic import BaseModel
+from typing import List
+from pydantic import BaseModel, Field
 
 
 class MLMetrics(BaseModel):
@@ -11,6 +11,12 @@ class MLMetrics(BaseModel):
     asr_word_error_rate_wer: float
     sentiment_analysis_macro_f1: float
     churn_prediction_roc_auc: float
+    # Offline benchmark results from the model registry / evaluation runs, not computed per request.
+    data_source: str = "offline_benchmark_reference"
+    reference_fields: List[str] = Field(default_factory=lambda: [
+        "intent_classification_macro_f1", "intent_classification_micro_f1", "ner_token_level_f1",
+        "asr_word_error_rate_wer", "sentiment_analysis_macro_f1", "churn_prediction_roc_auc",
+    ])
 
 
 class MLMetricsCalculator:
