@@ -1,0 +1,41 @@
+[
+  {
+    "id": "KB-DEV-SPEC-001",
+    "device_model": "Telco GigaWave Wi-Fi 6E Gateway (GW-AX6000)",
+    "category": "home_gateway_router",
+    "led_diagnostics": {
+      "POWER": {
+        "SOLID_GREEN": "Normal operation; AC power delivery optimal",
+        "FLASHING_RED": "Power supply unit fault or thermal overload protection active",
+        "OFF": "No power input or faulty power adapter"
+      },
+      "BROADBAND_PON": {
+        "SOLID_GREEN": "Optical connection synchronized to OLT; optical power optimal (-18 dBm)",
+        "FLASHING_GREEN": "Ranging in progress; acquiring optical synchronization",
+        "FLASHING_RED": "Loss of Signal (LOS); optical fiber disconnected, bent beyond critical radius, or external cable cut",
+        "SOLID_AMBER": "Degraded optical signal power (-28 dBm to -32 dBm); high attenuation on line"
+      },
+      "INTERNET": {
+        "SOLID_GREEN": "PPPoE/IPoE WAN session active; public IPv4/IPv6 assigned",
+        "FLASHING_AMBER": "WAN DHCP lease renewal in progress",
+        "SOLID_RED": "WAN authentication failure or DNS resolution unreachable"
+      },
+      "WIFI": {
+        "SOLID_GREEN": "2.4GHz, 5GHz, and 6GHz radios operational",
+        "FLASHING_BLUE": "WPS push-button pairing active (120-second discovery window)"
+      }
+    }
+  },
+  {
+    "id": "KB-DEV-SPEC-002",
+    "device_model": "Universal eSIM Profile Provisioning Manual",
+    "category": "mobile_esim",
+    "activation_protocol": [
+      "1. Verify customer identity with Step-Up MFA prior to releasing eSIM SM-DP+ activation code.",
+      "2. Customer must connect device to active Wi-Fi network before initiating profile download.",
+      "3. In device Settings, navigate to Cellular / Mobile Service -> Add eSIM -> Use QR Code.",
+      "4. Server address: 'cust-esim.telco.net', Activation Code format: 'LPA:1$cust-esim.telco.net$CONF-TOKEN'.",
+      "5. If download fails with error 'Profile Download Unsuccessful (EID Mismatch)', verify the device EID matches the registered EID in the Provisioning system."
+    ]
+  }
+]

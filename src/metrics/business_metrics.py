@@ -1,7 +1,7 @@
 """Business & Operational Metrics (Section 8.1)."""
 
-from typing import Dict, Any
-from pydantic import BaseModel
+from typing import List
+from pydantic import BaseModel, Field
 from src.data_engineering.lakehouse_sink import lakehouse_sink
 
 
@@ -13,6 +13,8 @@ class BusinessMetrics(BaseModel):
     net_promoter_score: float  # -100 to +100
     cost_per_interaction_usd: float
     total_churn_equity_preserved_usd: float
+    # CSAT / NPS need survey ingestion and churn equity needs CRM outcome joins; they are reference values, not measurements.
+    reference_fields: List[str] = Field(default_factory=list)
 
 
 class BusinessMetricsCalculator:
@@ -42,6 +44,7 @@ class BusinessMetricsCalculator:
             net_promoter_score=68.4,
             cost_per_interaction_usd=cpi,
             total_churn_equity_preserved_usd=14850.00,
+            reference_fields=["csat_score", "net_promoter_score", "total_churn_equity_preserved_usd"],
         )
 
 

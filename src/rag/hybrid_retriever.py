@@ -55,7 +55,7 @@ class HybridRetriever:
         # 2. Parallel Tier Retrievals
         dense_results = vector_store.search(query=query, top_k=15, metadata_filters=filters)
         bm25_results = bm25_engine.search(query=query, top_k=15, metadata_filters=filters)
-        graph_results = graph_retriever.search_relational_context(query=query, top_k=5)
+        graph_results = graph_retriever.search_relational_context(query=query, top_k=5, metadata_filters=filters)
 
         # 3. Reciprocal Rank Fusion (RRF)
         # RRF(d) = sum( weight_m / (k + rank_m(d)) )

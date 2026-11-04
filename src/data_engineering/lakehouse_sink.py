@@ -1,7 +1,8 @@
 """Analytical Data Lakehouse Sink (Google BigQuery Table Simulator)."""
 
-import time
-from typing import Dict, List, Any, Optional
+import threading
+from collections import deque
+from typing import Any, Deque, Dict, Optional
 import pandas as pd
 from src.core.config import settings
 from src.core.logging import get_logger
@@ -13,17 +14,24 @@ logger = get_logger(__name__)
 class BigQueryLakehouseSink:
     """Manages immutable, non-repudiation event logs and trajectory tables in BigQuery format."""
 
-    def __init__(self, dataset_name: str = settings.gcp_bigquery_dataset):
-        self.dataset_name = dataset_name
-        self.session_records: List[Dict[str, Any]] = []
-        self.trajectory_records: List[Dict[str, Any]] = []
-        self.guardrail_records: List[Dict[str, Any]] = []
+    MAX_RECORDS = 50_000  # bounded retention for the in-memory simulator
+
+    def __init__(self, dataset_name: Optional[str] = None):
+        self.dataset_name = dataset_name or settings.gcp_bigquery_dataset
+        self.session_records: Deque[Dict[str, Any]] = deque(maxlen=self.MAX_RECORDS)
+        self.trajectory_records: Deque[Dict[str, Any]] = deque(maxlen=self.MAX_RECORDS)
+        self.guardrail_records: Deque[Dict[str, Any]] = deque(maxlen=self.MAX_RECORDS)
+        self._lock = threading.Lock()
 
         # Auto-subscribe to stream processor events
         stream_processor.subscribe("*", self._handle_stream_event)
 
     def _handle_stream_event(self, event: StreamEvent) -> None:
         """Route streaming events into corresponding BigQuery analytical tables."""
+        with self._lock:
+            self._route_event(event)
+
+    def _route_event(self, event: StreamEvent) -> None:
         if event.event_type == "AGENT_REASONING_STEP":
             self.trajectory_records.append({
                 "trace_id": event.trace_id,
@@ -63,13 +71,20 @@ class BigQueryLakehouseSink:
         """Return analytical DataFrame of completed sessions."""
         if not self.session_records:
             return pd.DataFrame(columns=["trace_id", "session_id", "duration_sec", "cost_usd", "fcr_resolved", "escalated_to_human"])
-        return pd.DataFrame(self.session_records)
+        with self._lock:
+            return pd.DataFrame(list(self.session_records))
 
     def query_trajectories_dataframe(self) -> pd.DataFrame:
         """Return analytical DataFrame of agent tool execution trajectories."""
         if not self.trajectory_records:
             return pd.DataFrame(columns=["trace_id", "session_id", "agent_name", "tool_name", "tool_status", "latency_ms"])
-        return pd.DataFrame(self.trajectory_records)
+        with self._lock:
+            return pd.DataFrame(list(self.trajectory_records))
+
+    def query_guardrails_dataframe(self) -> pd.DataFrame:
+        """Return analytical DataFrame of guardrail verdicts."""
+        with self._lock:
+            return pd.DataFrame(list(self.guardrail_records))
 
     def get_summary_statistics(self) -> Dict[str, Any]:
         """Aggregate high-level Lakehouse metrics."""
@@ -84,8 +99,8 @@ class BigQueryLakehouseSink:
                 "total_cost_usd": 0.0,
             }
 
-        fcr_count = df_sess["fcr_resolved"].sum() if "fcr_resolved" in df_sess else 0
-        esc_count = df_sess["escalated_to_human"].sum() if "escalated_to_human" in df_sess else 0
+        fcr_count = int(df_sess["fcr_resolved"].sum()) if "fcr_resolved" in df_sess else 0
+        esc_count = int(df_sess["escalated_to_human"].sum()) if "escalated_to_human" in df_sess else 0
 
         return {
             "total_logged_sessions": total_sessions,

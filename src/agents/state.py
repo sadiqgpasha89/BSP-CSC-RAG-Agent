@@ -35,6 +35,7 @@ class AgenticSessionState(BaseModel):
     primary_intent: str = "GENERAL_INQUIRY"
     secondary_intents: List[str] = Field(default_factory=list)
     sentiment_score: float = 0.0
+    sentiment_label: str = "NEUTRAL"
     frustration_velocity: float = 0.0
     churn_risk_score: float = 0.10
 
@@ -43,6 +44,7 @@ class AgenticSessionState(BaseModel):
     agent_delegation_history: List[str] = Field(default_factory=list)
     step_count: int = 0
     consecutive_tool_failures: int = 0
+    invocation_signatures: List[str] = Field(default_factory=list)
 
     # Retrievial and Guardrail Artifacts
     retrieved_chunks: List[Dict[str, Any]] = Field(default_factory=list)
@@ -81,13 +83,33 @@ class AgenticSessionState(BaseModel):
         )
         self.execution_stack.append(step)
 
-        # Track consecutive failures for HITL escalation
-        if tool_output and (tool_output.get("success") is False or "error" in tool_output):
+        # Track consecutive failures for HITL escalation. Agents expose an explicit top-level ``success`` flag /
+        # ``error`` key; previously only these top-level keys were inspected while agents nested backend errors
+        # one level down, so the "two consecutive tool failures" trigger could never fire.
+        if tool_output is not None and (tool_output.get("success") is False or "error" in tool_output):
             self.consecutive_tool_failures += 1
-        else:
+        elif tool_name is not None:
             self.consecutive_tool_failures = 0
 
         return step
+
+    def escalate(self, reason: str) -> None:
+        """Flag the session for human handoff, accumulating (not overwriting) the reasons."""
+        self.is_escalated_to_human = True
+        existing = [r for r in (self.escalation_reason or "").split(" | ") if r]
+        if reason not in existing:
+            existing.append(reason)
+        self.escalation_reason = " | ".join(existing)
+
+    def register_invocation(self, agent_name: str, instruction: str) -> bool:
+        """Record a delegation; returns True if the same agent was already invoked with the identical sub-goal.
+
+        Implements the spec rule (Section 10.4): the same sub-agent invoked twice with identical sub-goals is a loop.
+        """
+        signature = f"{agent_name}::{instruction}"
+        repeated = signature in self.invocation_signatures
+        self.invocation_signatures.append(signature)
+        return repeated
 
     def detect_cyclic_loop(self) -> bool:
         """Check if an infinite delegation loop is occurring among sub-agents."""

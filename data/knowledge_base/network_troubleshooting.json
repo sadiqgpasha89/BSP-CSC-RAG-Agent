@@ -1,0 +1,66 @@
+[
+  {
+    "id": "KB-NW-DIAG-001",
+    "title": "Optical Time Domain Reflectometer (OTDR) Fiber Line Diagnostic SOP",
+    "topic": "fiber_broadband_diagnostics",
+    "keywords": ["OTDR", "fiber cut", "attenuation", "optical loss", "PON", "ONT"],
+    "diagnostic_steps": [
+      "Step 1: Check Optical Network Terminal (ONT) optical receiver power (normal: -8 dBm to -27 dBm).",
+      "Step 2: If power < -30 dBm or LOS (Loss of Signal) light flashes red, dispatch automated OTDR pulse test via OSS adapter.",
+      "Step 3: Analyze OTDR return trace: A high reflective Fresnel spike with sharp drop-off indicates optical fiber break at distance D meters from Optical Line Terminal (OLT).",
+      "Step 4: If fiber break is localized within customer premises drop cable (< 150m), guide customer to check internal fiber patch cord.",
+      "Step 5: If fiber break is beyond drop terminal (> 150m), trigger urgent field technician dispatch and issue proactive outage credit."
+    ],
+    "resolution_criteria": "Optical receiver power restored to >= -22 dBm; ONT PON LED solid green."
+  },
+  {
+    "id": "KB-NW-DIAG-002",
+    "title": "Cellular Network Attachment Error Code 0x4F (ERR_NW_ATTACH_TIMEOUT_0x4F)",
+    "topic": "cellular_5g_lte_attachment",
+    "keywords": ["ERR_NW_ATTACH_TIMEOUT_0x4F", "0x4F", "attach failure", "UDM", "HSS", "eNodeB", "gNodeB"],
+    "symptoms": "User handset displays 'No Service' or fails to attach to 5G Standalone (SA) / Non-Standalone (NSA) carrier channel.",
+    "root_cause_analysis": "Handset radio signaling timer expired while awaiting NAS (Non-Access Stratum) Authentication Response from Unified Data Management (UDM) / Home Subscriber Server (HSS). Commonly triggered by SIM profile desynchronization or localized core cell tower overload.",
+    "troubleshooting_steps": [
+      "1. Verify customer subscription status and ICCID profile active flag in UDM/HSS.",
+      "2. Query local cell tower telemetry for radio frequency (RF) utilization and sector alarms.",
+      "3. Trigger an OSS Network Core soft reset on the subscriber's Mobile Station International Subscriber Directory Number (MSISDN) to purge stale packet-data protocol (PDP) context.",
+      "4. Instruct customer to toggle Airplane Mode for 15 seconds to force re-attach handshake.",
+      "5. Verify APN settings are configured to 'fast.telco.net' with authentication type PAP/CHAP."
+    ]
+  },
+  {
+    "id": "KB-NW-DIAG-003",
+    "title": "VoWiFi & IMS Registration Failure Code (ERR_SIP_503_SERVICE_UNAVAILABLE)",
+    "topic": "voice_over_wifi_ims",
+    "keywords": ["ERR_SIP_503_SERVICE_UNAVAILABLE", "VoWiFi", "IMS", "SIP 503", "ePDG"],
+    "symptoms": "Unable to initiate or receive Wi-Fi voice calls; calls fail with instantaneous disconnect.",
+    "root_cause_analysis": "IP Multimedia Subsystem (IMS) server returned HTTP/SIP 503 indicating temporary overload or IPsec tunnel failure across evolved Packet Data Gateway (ePDG).",
+    "troubleshooting_steps": [
+      "1. Check if home router blocks UDP ports 500 (IKEv2) and 4500 (IPsec NAT-Traversal).",
+      "2. Verify SIM is provisioned with 'VOWIFI_VOICE_CALLING_SVC' entitlement.",
+      "3. Perform dynamic subscriber profile refresh on the IMS core via Provisioning Adapter.",
+      "4. If persistent, reboot Wi-Fi gateway to clear stale NAT session state."
+    ]
+  },
+  {
+    "id": "KB-NW-DIAG-004",
+    "title": "Standard Mobile APN & Roaming Configuration Parameters",
+    "topic": "cellular_apn_settings",
+    "keywords": ["APN", "fast.telco.net", "MMS", "roaming APN", "data settings"],
+    "parameters": {
+      "name": "Telco Enterprise 5G",
+      "apn": "fast.telco.net",
+      "proxy": "Not set",
+      "port": "Not set",
+      "mmsc": "http://mms.telco.net/servlets/mms",
+      "mms_proxy": "mms-proxy.telco.net",
+      "mms_port": "8080",
+      "mcc": "310",
+      "mnc": "410",
+      "auth_type": "PAP or CHAP",
+      "apn_type": "default,supl,mms",
+      "apn_protocol": "IPv4/IPv6",
+      "apn_roaming_protocol": "IPv4/IPv6"
+    }
+  }
+]

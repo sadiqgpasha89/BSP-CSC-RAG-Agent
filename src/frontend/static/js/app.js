@@ -2,6 +2,36 @@
  * Enterprise Telco Agentic Care Platform - Interactive Client Logic
  */
 
+/**
+ * Escape untrusted text before it is interpolated into an innerHTML template. Customer utterances flow through the
+ * execution plan and the HITL dossier, so without this a crafted chat message becomes stored XSS in the
+ * supervisor's browser.
+ */
+function esc(value) {
+  const map = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+  return String(value ?? "").replace(/[&<>"']/g, (c) => map[c]);
+}
+
+/**
+ * fetch() wrapper for privileged endpoints. Outside development the API requires an operator key (X-API-Key); on a
+ * 401 we prompt once and keep the key for the browser session only (never localStorage).
+ */
+async function apiFetch(url, options = {}) {
+  const withKey = () => {
+    const key = sessionStorage.getItem("operatorKey");
+    return key ? { ...options, headers: { ...(options.headers || {}), "X-API-Key": key } } : options;
+  };
+  let res = await fetch(url, withKey());
+  if (res.status === 401) {
+    const key = window.prompt("Operator API key required for this action:");
+    if (key) {
+      sessionStorage.setItem("operatorKey", key);
+      res = await fetch(url, withKey());
+    }
+  }
+  return res;
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   // Global State
   let activeSubscriberId = "SUB-882194";
@@ -94,12 +124,12 @@ document.addEventListener("DOMContentLoaded", () => {
     chatSubIndicator.textContent = `Active Subscriber: ${sub.name} (${subId}) | Plan: ${sub.plan_code}`;
 
     subDetailsBox.innerHTML = `
-      <div class="sub-detail-row"><span class="sub-detail-label">Name & Tier:</span> <strong>${sub.name} (${sub.tier})</strong></div>
-      <div class="sub-detail-row"><span class="sub-detail-label">Plan Code:</span> <code>${sub.plan_code}</code></div>
-      <div class="sub-detail-row"><span class="sub-detail-label">Cell Sector:</span> <span>${sub.sector}</span></div>
-      <div class="sub-detail-row"><span class="sub-detail-label">Last Bill / Unbilled:</span> <span>${sub.lastBill} / ${sub.unbilled}</span></div>
-      <div class="sub-detail-row"><span class="sub-detail-label">Churn Risk ($\delta$):</span> <strong class="${sub.churnRisk > 0.75 ? 'text-danger' : 'text-accent'}">${sub.churnRisk}</strong></div>
-      <div class="sub-detail-row"><span class="sub-detail-label">Active Hardware:</span> <span>${sub.equipment}</span></div>
+      <div class="sub-detail-row"><span class="sub-detail-label">Name & Tier:</span> <strong>${esc(sub.name)} (${esc(sub.tier)})</strong></div>
+      <div class="sub-detail-row"><span class="sub-detail-label">Plan Code:</span> <code>${esc(sub.plan_code)}</code></div>
+      <div class="sub-detail-row"><span class="sub-detail-label">Cell Sector:</span> <span>${esc(sub.sector)}</span></div>
+      <div class="sub-detail-row"><span class="sub-detail-label">Last Bill / Unbilled:</span> <span>${esc(sub.lastBill)} / ${esc(sub.unbilled)}</span></div>
+      <div class="sub-detail-row"><span class="sub-detail-label">Churn Risk ($\delta$):</span> <strong class="${sub.churnRisk > 0.75 ? 'text-danger' : 'text-accent'}">${esc(sub.churnRisk)}</strong></div>
+      <div class="sub-detail-row"><span class="sub-detail-label">Active Hardware:</span> <span>${esc(sub.equipment)}</span></div>
     `;
   }
 
@@ -158,7 +188,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const data = await res.json();
       removeChatMessage(loadingId);
 
-      if (data.final_response) {
+      if (!res.ok) {
+        appendChatMessage("agent", res.status === 404 ? "Subscriber not found." : "The service could not process that request. Please try again.");
+      } else if (data.final_response) {
         appendChatMessage("agent", data.final_response);
         updateTraceDAG(data);
         if (data.sentiment_score !== undefined) {
@@ -225,10 +257,10 @@ document.addEventListener("DOMContentLoaded", () => {
         stepCard.className = "step-card";
         stepCard.innerHTML = `
           <div class="step-card-header">
-            <span>Step ${idx + 1}: ${task.target_agent}</span>
-            <span class="step-tool-badge">${task.status}</span>
+            <span>Step ${idx + 1}: ${esc(task.target_agent)}</span>
+            <span class="step-tool-badge">${esc(task.status)}</span>
           </div>
-          <div class="step-thought">${task.instruction}</div>
+          <div class="step-thought">${esc(task.instruction)}</div>
         `;
         stepsContainer.appendChild(stepCard);
       });
@@ -243,7 +275,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (data.retrieved_chunks_count > 0) {
       ragContainer.innerHTML = `
         <div class="rag-citation-card">
-          <div class="citation-title">Grounded Context Chunks (${data.retrieved_chunks_count} retrieved via RRF)</div>
+          <div class="citation-title">Grounded Context Chunks (${esc(data.retrieved_chunks_count)} retrieved via RRF)</div>
           <p style="font-size:0.75rem; color: var(--text-secondary);">4-Tier Hybrid: Dense Cosine ANN + Sparse BM25 + GraphRAG + Cross-Encoder Neural Reranking</p>
         </div>
       `;
@@ -269,10 +301,10 @@ document.addEventListener("DOMContentLoaded", () => {
           const isAlarm = n.data && n.data.status && n.data.status.includes("alarm");
           card.className = `topology-node-card ${isAlarm ? 'alarm' : ''}`;
           card.innerHTML = `
-            <div class="node-title">${n.id}</div>
-            <div style="font-size:0.72rem; color:var(--text-muted);">${n.data.name || ''}</div>
+            <div class="node-title">${esc(n.id)}</div>
+            <div style="font-size:0.72rem; color:var(--text-muted);">${esc(n.data.name || '')}</div>
             <span class="badge ${isAlarm ? 'badge-danger' : 'badge-accent'}" style="margin-top:6px;">
-              ${n.data.status || 'operational'}
+              ${esc(n.data.status || 'operational')}
             </span>
           `;
           visualizer.appendChild(card);
@@ -289,9 +321,9 @@ document.addEventListener("DOMContentLoaded", () => {
         const item = document.createElement("div");
         item.className = "alarm-alert-box";
         item.innerHTML = `
-          <strong>[${a.severity}] ${a.alarm_type}</strong> on ${a.target_component} (${a.sector})<br>
-          <span style="font-size:0.75rem; color:var(--text-secondary);">${a.root_cause}</span><br>
-          <small style="color:var(--accent-amber);">Estimated Restoration: ${a.estimated_restoration_time} | Impacted: ${a.subscribers_impacted_count} lines</small>
+          <strong>[${esc(a.severity)}] ${esc(a.alarm_type)}</strong> on ${esc(a.target_component)} (${esc(a.sector)})<br>
+          <span style="font-size:0.75rem; color:var(--text-secondary);">${esc(a.root_cause)}</span><br>
+          <small style="color:var(--accent-amber);">Estimated Restoration: ${esc(a.estimated_restoration_time)} | Impacted: ${esc(a.subscribers_impacted_count)} lines</small>
         `;
         alarmsContainer.appendChild(item);
       });
@@ -305,15 +337,15 @@ document.addEventListener("DOMContentLoaded", () => {
     const consoleEl = document.getElementById("diagnostic-output-console");
     consoleEl.innerHTML = `<pre>Sending optical pulse down distribution trunk OLT-OPTICAL-01/PON-04...</pre>`;
     try {
-      const res = await fetch("/api/v1/network/otdr-test", {
+      const res = await apiFetch("/api/v1/network/otdr-test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ olt_port: "OLT-OPTICAL-01/PON-04", subscriber_id: activeSubscriberId })
       });
       const data = await res.json();
-      consoleEl.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+      consoleEl.innerHTML = `<pre>${esc(JSON.stringify(data, null, 2))}</pre>`;
     } catch (e) {
-      consoleEl.innerHTML = `<pre>OTDR Test failed: ${e.message}</pre>`;
+      consoleEl.innerHTML = `<pre>OTDR Test failed: ${esc(e.message)}</pre>`;
     }
   });
 
@@ -322,15 +354,15 @@ document.addEventListener("DOMContentLoaded", () => {
     const consoleEl = document.getElementById("diagnostic-output-console");
     consoleEl.innerHTML = `<pre>Dispatching Diameter soft-reset command to Ericsson 5G UDM / HSS Core...</pre>`;
     try {
-      const res = await fetch("/api/v1/network/core-reset", {
+      const res = await apiFetch("/api/v1/network/core-reset", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ msisdn: "+1-415-555-0199" })
       });
       const data = await res.json();
-      consoleEl.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+      consoleEl.innerHTML = `<pre>${esc(JSON.stringify(data, null, 2))}</pre>`;
     } catch (e) {
-      consoleEl.innerHTML = `<pre>Reset failed: ${e.message}</pre>`;
+      consoleEl.innerHTML = `<pre>Reset failed: ${esc(e.message)}</pre>`;
     }
   });
 
@@ -340,8 +372,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const res = await fetch("/api/v1/metrics/cost-arbitrage");
       const data = await res.json();
 
-      document.getElementById("hybrid-openstack-pct").textContent = `${data.openstack_percentage || 75.0}%`;
-      document.getElementById("hybrid-gcp-pct").textContent = `${data.gcp_total_percentage || 25.0}%`;
+      document.getElementById("hybrid-openstack-pct").textContent = `${data.openstack_percentage ?? 0}%`;
+      document.getElementById("hybrid-gcp-pct").textContent = `${data.gcp_total_percentage ?? 0}%`;
       const savingsStr = `$${(data.cumulative_arbitrage_savings_usd || 0).toFixed(2)}`;
       document.getElementById("hybrid-savings-val").textContent = savingsStr;
       document.getElementById("header-savings").textContent = savingsStr;
@@ -369,11 +401,11 @@ document.addEventListener("DOMContentLoaded", () => {
       models.forEach(m => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
-          <td><strong>${m.version_id}</strong> (${m.quantization})</td>
-          <td>${m.deployment_target}</td>
-          <td>${m.intent_f1_score}</td>
-          <td>${m.hallucination_rate}</td>
-          <td><span class="badge ${m.status === 'PRODUCTION' ? 'badge-accent' : 'badge-warning'}">${m.status}</span></td>
+          <td><strong>${esc(m.version_id)}</strong> (${esc(m.quantization)})</td>
+          <td>${esc(m.deployment_target)}</td>
+          <td>${esc(m.intent_f1_score)}</td>
+          <td>${esc(m.hallucination_rate)}</td>
+          <td><span class="badge ${m.status === 'PRODUCTION' ? 'badge-accent' : 'badge-warning'}">${esc(m.status)}</span></td>
         `;
         tbody.appendChild(tr);
       });
@@ -388,19 +420,19 @@ document.addEventListener("DOMContentLoaded", () => {
     const logEl = document.getElementById("healing-actions-log");
     logEl.innerHTML = "Evaluating detected drift against automated self-healing mitigation policies...";
     try {
-      const res = await fetch("/api/v1/mlops/self-heal", { method: "POST" });
+      const res = await apiFetch("/api/v1/mlops/self-heal", { method: "POST" });
       const data = await res.json();
       let html = `<strong style="color:var(--accent-cyan)">Self-Healing Interventions Executed:</strong><br>`;
       if (data.actions_taken && data.actions_taken.length > 0) {
         data.actions_taken.forEach(act => {
-          html += `* [${act.action_type}] on <strong>${act.target_component}</strong>: ${act.justification}<br>`;
+          html += `* [${esc(act.action_type)}] on <strong>${esc(act.target_component)}</strong>: ${esc(act.justification)}<br>`;
         });
       } else {
         html += `<span style="color:var(--accent-green)">Nominal status: No active drift violations. All model weights and tool rate limits are optimal.</span>`;
       }
       logEl.innerHTML = html;
     } catch (e) {
-      logEl.innerHTML = `Failed: ${e.message}`;
+      logEl.textContent = `Failed: ${e.message}`;
     }
   });
 
@@ -450,7 +482,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // 10. HITL Queue Loader
   async function loadHitlQueue() {
     try {
-      const res = await fetch("/api/v1/hitl/queue");
+      const res = await apiFetch("/api/v1/hitl/queue");
       const queue = await res.json();
       const container = document.getElementById("hitl-queue-list");
       document.getElementById("hitl-count-badge").textContent = queue.length;
@@ -470,16 +502,16 @@ document.addEventListener("DOMContentLoaded", () => {
         card.className = "manifest-card";
         card.innerHTML = `
           <div class="manifest-header">
-            <strong>Escalation ID: ${m.escalation_id} | Subscriber: ${m.subscriber_id} (${m.msisdn})</strong>
-            <span class="badge badge-warning">${m.status}</span>
+            <strong>Escalation ID: ${esc(m.escalation_id)} | Subscriber: ${esc(m.subscriber_id)} (${esc(m.msisdn)})</strong>
+            <span class="badge badge-warning">${esc(m.status)}</span>
           </div>
           <div class="manifest-body">
-            <strong>Reason:</strong> ${m.escalation_reason}<br>
-            <strong>Summary:</strong> ${m.root_cause_summary}<br>
-            <strong>Identity State:</strong> ${m.verified_identity_state} | Account CLV: $${m.clv_usd}
+            <strong>Reason:</strong> ${esc(m.escalation_reason)}<br>
+            <strong>Summary:</strong> ${esc(m.root_cause_summary)}<br>
+            <strong>Identity State:</strong> ${esc(m.verified_identity_state)} | Account CLV: $${esc(m.clv_usd)}
           </div>
           <div class="manifest-actions">
-            <button class="btn btn-primary btn-sm resolve-esc-btn" data-id="${m.escalation_id}">Mark Resolved with Override</button>
+            <button class="btn btn-primary btn-sm resolve-esc-btn" data-id="${esc(m.escalation_id)}">Mark Resolved with Override</button>
           </div>
         `;
         container.appendChild(card);
@@ -488,7 +520,7 @@ document.addEventListener("DOMContentLoaded", () => {
       document.querySelectorAll(".resolve-esc-btn").forEach(btn => {
         btn.addEventListener("click", async () => {
           const escId = btn.getAttribute("data-id");
-          await fetch("/api/v1/hitl/resolve", {
+          await apiFetch("/api/v1/hitl/resolve", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ escalation_id: escId, resolution_notes: "Representative reviewed and confirmed override." })

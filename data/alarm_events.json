@@ -1,0 +1,34 @@
+[
+  {
+    "alarm_id": "ALM-2026-0914-001",
+    "severity": "CRITICAL",
+    "status": "ACTIVE",
+    "target_component": "TOWER-104",
+    "sector": "Sector-7",
+    "alarm_type": "BACKHAUL_FIBER_CUT",
+    "detected_at": "2026-09-14T21:40:00Z",
+    "estimated_restoration_time": "2026-09-15T01:30:00Z",
+    "impacted_services": ["5G_SA_MOBILE_DATA", "VOLTE_VOICE", "FIBER_BROADBAND_PON"],
+    "subscribers_impacted_count": 3410,
+    "root_cause": "Major utility construction backhoe sliced 40G terrestrial backhaul trunk fiber on Sunset Blvd.",
+    "field_crew_dispatched": true,
+    "proactive_broadcast_active": true,
+    "recommended_customer_message": "We are aware of a backhaul fiber disruption impacting Sunset Sector-7. Repair technicians are actively on-site; estimated full service restoration is 01:30. A notification will be sent immediately upon resolution."
+  },
+  {
+    "alarm_id": "ALM-2026-0914-002",
+    "severity": "MINOR",
+    "status": "ACTIVE",
+    "target_component": "TOWER-103",
+    "sector": "Sector-3",
+    "alarm_type": "RF_ATTENUATION_WARNING",
+    "detected_at": "2026-09-14T20:15:00Z",
+    "estimated_restoration_time": "2026-09-15T04:00:00Z",
+    "impacted_services": ["5G_CARRIER_AGGREGATION_SUB6"],
+    "subscribers_impacted_count": 80,
+    "root_cause": "Intermittent high microwave path loss due to localized heavy coastal fog.",
+    "field_crew_dispatched": false,
+    "proactive_broadcast_active": false,
+    "recommended_customer_message": "Transient carrier aggregation latency may be observed; core 4G/5G basic service remains operational."
+  }
+]

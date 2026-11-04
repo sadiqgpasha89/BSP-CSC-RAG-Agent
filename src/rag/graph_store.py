@@ -1,5 +1,6 @@
 """GraphRAG Subsystem for Network Topology & SOP Traversal."""
 
+import re
 from typing import Dict, List, Any, Optional, Tuple
 from src.data_engineering.graph_rag_builder import graph_builder
 from src.data_engineering.ingestion_pipeline import KnowledgeChunk
@@ -14,14 +15,30 @@ class GraphStoreRetriever:
     def __init__(self):
         self.builder = graph_builder
 
-    def search_relational_context(self, query: str, top_k: int = 5) -> List[Tuple[KnowledgeChunk, float]]:
-        """Identify entities in query, traverse neighborhood, and synthesize graph context chunks."""
-        results: List[Tuple[KnowledgeChunk, float]] = []
+    @staticmethod
+    def _mentions(query_lower: str, alias: str) -> bool:
+        """Whole-token match so 'TOWER-10' cannot fire on 'TOWER-104' and short ids never match inside words."""
+        return re.search(rf"(?<![a-z0-9_\-]){re.escape(alias)}(?![a-z0-9_\-])", query_lower) is not None
 
-        # Check for presence of graph nodes in query
+    def search_relational_context(
+        self,
+        query: str,
+        top_k: int = 5,
+        metadata_filters: Optional[Dict[str, Any]] = None,
+    ) -> List[Tuple[KnowledgeChunk, float]]:
+        """Identify entities in query, traverse neighborhood, and synthesize graph context chunks.
+
+        ``metadata_filters`` applies the same temporal/contractual isolation as the dense and sparse tiers; tariff
+        nodes are tagged with the governing plan so GraphRAG cannot leak 2026 entitlements to a 2018 subscriber.
+        """
+        results: List[Tuple[KnowledgeChunk, float]] = []
+        query_lower = query.lower()
+
+        # Match full ids ("TOWER-104") and un-prefixed aliases ("0x4F" for "ERR_CODE:0x4F", "5G_ULTRA_MAX_2026" for "PLAN:...").
         matched_nodes = []
         for node_id in self.builder.graph.nodes:
-            if node_id.lower() in query.lower() or node_id.replace("PLAN:", "").lower() in query.lower():
+            aliases = {node_id.lower(), node_id.split(":", 1)[-1].lower()}
+            if any(self._mentions(query_lower, a) for a in aliases):
                 matched_nodes.append(node_id)
 
         for node_id in matched_nodes:
@@ -42,6 +59,11 @@ class GraphStoreRetriever:
                 + ("\n".join(connections_desc) if connections_desc else "  No explicit external edges.")
             )
 
+            owner_plan = self.builder.tariff_owner(node_id)
+            owner_is_legacy = bool(
+                owner_plan and self.builder.graph.nodes.get(f"PLAN:{owner_plan}", {}).get("is_legacy", False)
+            )
+
             chunk = KnowledgeChunk(
                 chunk_id=f"GRAPH-{node_id}",
                 doc_id=f"GRAPH-{node_id}",
@@ -49,9 +71,12 @@ class GraphStoreRetriever:
                 category="graph_topology",
                 content=content,
                 raw_metadata=node_data,
+                plan_code=owner_plan,
+                is_legacy=owner_is_legacy,
                 keywords=[node_id, str(node_data.get("type"))],
             )
-            results.append((chunk, 0.92))
+            if chunk.matches(metadata_filters):
+                results.append((chunk, 0.92))
 
         return results[:top_k]
 

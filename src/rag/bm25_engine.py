@@ -22,14 +22,17 @@ class BM25Engine:
         self.doc_freqs: Dict[str, int] = Counter()
         self.idf: Dict[str, float] = {}
         self.tokenized_docs: List[List[str]] = []
+        self.term_counts: List[Counter] = []
         self._is_indexed: bool = False
         self.initialize_index()
 
     def tokenize(self, text: str) -> List[str]:
         """Telecom-adapted tokenization preserving error codes, hyphenated models, and plan codes."""
         # Preserves tokens like ERR_NW_ATTACH_TIMEOUT_0x4F, GW-AX6000, 0x4F, fast.telco.net
-        tokens = re.findall(r"[A-Za-z0-9_\-\.]+", text.lower())
-        return tokens
+        raw_tokens = re.findall(r"[A-Za-z0-9_\-\.]+", text.lower())
+        # Strip sentence punctuation glued to a token ("refund." must match "refund") while keeping internal
+        # separators that carry meaning (fast.telco.net, gw-ax6000, err_nw_attach_timeout_0x4f).
+        return [t for t in (tok.strip(".-") for tok in raw_tokens) if t]
 
     def initialize_index(self) -> None:
         """Build BM25 term frequency, inverse document frequency, and document length matrices."""
@@ -41,6 +44,7 @@ class BM25Engine:
             self.tokenize(f"{c.title} {c.category} {c.content} {' '.join(c.keywords)}")
             for c in self.chunks
         ]
+        self.term_counts = [Counter(d) for d in self.tokenized_docs]  # computed once, not per query
         self.doc_lengths = [len(d) for d in self.tokenized_docs]
         self.avg_doc_len = sum(self.doc_lengths) / max(1, len(self.doc_lengths))
 
@@ -72,44 +76,27 @@ class BM25Engine:
         if not query_tokens:
             return []
 
-        scores: List[float] = [0.0] * len(self.chunks)
+        ranked: List[Tuple[KnowledgeChunk, float]] = []
+        for i, chunk in enumerate(self.chunks):
+            if not chunk.matches(metadata_filters):
+                continue
 
-        for i, doc in enumerate(self.tokenized_docs):
+            term_counts = self.term_counts[i]
             doc_len = self.doc_lengths[i]
-            term_counts = Counter(doc)
-
             doc_score = 0.0
             for term in query_tokens:
-                if term in term_counts:
-                    tf = term_counts[term]
-                    idf_val = self.idf.get(term, 0.1)
-                    numerator = tf * (self.k1 + 1.0)
-                    denominator = tf + self.k1 * (1.0 - self.b + self.b * (doc_len / max(1.0, self.avg_doc_len)))
-                    doc_score += idf_val * (numerator / max(0.001, denominator))
-            scores[i] = doc_score
+                tf = term_counts.get(term)
+                if not tf:
+                    continue
+                idf_val = self.idf.get(term, 0.0)
+                numerator = tf * (self.k1 + 1.0)
+                denominator = tf + self.k1 * (1.0 - self.b + self.b * (doc_len / max(1.0, self.avg_doc_len)))
+                doc_score += idf_val * (numerator / max(0.001, denominator))
 
-        # Apply metadata filters
-        candidate_indices = range(len(self.chunks))
-        if metadata_filters:
-            filtered_indices = []
-            for idx in candidate_indices:
-                chunk = self.chunks[idx]
-                match = True
-                for k, v in metadata_filters.items():
-                    chunk_val = getattr(chunk, k, chunk.raw_metadata.get(k))
-                    if chunk_val != v:
-                        match = False
-                        break
-                if match:
-                    filtered_indices.append(idx)
-            candidate_indices = filtered_indices
+            if doc_score > 0.0:  # no lexical overlap -> not a candidate
+                ranked.append((chunk, float(doc_score)))
 
-        ranked = sorted(
-            [(self.chunks[i], float(scores[i])) for i in candidate_indices],
-            key=lambda item: item[1],
-            reverse=True,
-        )
-
+        ranked.sort(key=lambda item: item[1], reverse=True)
         return ranked[:top_k]
 
 

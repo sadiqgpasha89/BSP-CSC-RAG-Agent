@@ -1,7 +1,9 @@
 """MLOps, Drift Intelligence & Model Registry API Router."""
 
 from typing import Dict, Any, List
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+
+from src.api.deps import require_operator
 from src.mlops.drift_detector import drift_detector, DriftReport
 from src.mlops.self_healing import self_healing_engine
 from src.mlops.model_registry import model_registry
@@ -23,10 +25,11 @@ def run_drift_check():
         recent_tool_counts=sample_tools,
         recent_rag_similarities=sample_rag,
     )
+    report.input_source = "synthetic_sample_window"  # explicit: this endpoint is not yet fed by live telemetry
     return report
 
 
-@router.post("/self-heal")
+@router.post("/self-heal", dependencies=[Depends(require_operator)])
 def trigger_self_healing():
     """Evaluate detected drift and trigger automated self-healing mitigation policies."""
     report = run_drift_check()

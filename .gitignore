@@ -6,9 +6,15 @@ __pycache__/
 .ruff_cache/
 .mypy_cache/
 .coverage
+htmlcov/
 coverage/
+
+# Secrets: ignore real env files but keep the committed template
 .env
 .env.*
-data/
+!.env.example
+
+# NOTE: data/ is intentionally NOT ignored. The knowledge base, subscriber catalog, topology and alarm feed are
+# required at runtime; ignoring them left fresh clones with an empty RAG index and no subscribers.
 *.db
 *.sqlite*

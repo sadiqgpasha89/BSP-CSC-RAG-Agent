@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 import networkx as nx
+from src.core.config import settings
 from src.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -12,19 +13,20 @@ logger = get_logger(__name__)
 class GraphRAGBuilder:
     """Builds and queries the enterprise Network Topology and SOP Knowledge Graph."""
 
-    def __init__(self, topology_path: str = "data/network_topology.json"):
-        self.topology_path = Path(topology_path)
+    def __init__(self, topology_path: Optional[str] = None):
+        self.topology_path = Path(topology_path) if topology_path else Path(settings.data_dir) / "network_topology.json"
         self.graph = nx.DiGraph()
         self._build_graph()
 
     def _build_graph(self) -> None:
         """Populate NetworkX directed graph from topology dataset and diagnostic relationships."""
-        if not self.topology_path.exists():
-            logger.warning("Topology path not found, initializing empty graph", path=str(self.topology_path))
-            return
-
-        with open(self.topology_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
+        data: Dict[str, Any] = {"nodes": [], "edges": []}
+        if self.topology_path.exists():
+            with open(self.topology_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        else:
+            # Tariff / diagnostic relations are static domain knowledge and must not vanish with the topology file.
+            logger.warning("Topology path not found, building tariff/diagnostic graph only", path=str(self.topology_path))
 
         # Add Nodes
         for node in data.get("nodes", []):
@@ -75,6 +77,34 @@ class GraphRAGBuilder:
         self.graph.add_edge("TOWER-104", "ERR_CODE:0x4F", relation="triggers_error_during_cut")
         self.graph.add_edge("OLT-OPTICAL-01", "TOOL:OTDR_LINE_TEST", relation="requires_line_diagnostic")
 
+    def _serialize(self, graph: nx.DiGraph, root: Optional[str] = None) -> Dict[str, Any]:
+        nodes_data = [{"id": n, "data": graph.nodes[n]} for n in graph.nodes()]
+        edges_data = [{"source": u, "target": v, "data": graph.get_edge_data(u, v)} for u, v in graph.edges()]
+        payload: Dict[str, Any] = {
+            "total_nodes": len(nodes_data),
+            "total_edges": len(edges_data),
+            "nodes": nodes_data,
+            "edges": edges_data,
+        }
+        if root is not None:
+            payload["root_entity"] = root
+        return payload
+
+    def export_full_graph(self) -> Dict[str, Any]:
+        """Return every node and edge (the topology endpoint previously exposed only one 3-hop neighbourhood)."""
+        return self._serialize(self.graph)
+
+    def tariff_owner(self, node_id: str) -> Optional[str]:
+        """Resolve the plan code that governs a tariff-related node, for contractual (temporal) filtering."""
+        data = self.graph.nodes.get(node_id, {})
+        if data.get("type") == "tariff_plan":
+            return node_id.split(":", 1)[-1]
+        if data.get("type") == "plan_feature":
+            for pred in self.graph.predecessors(node_id):
+                if self.graph.nodes[pred].get("type") == "tariff_plan":
+                    return pred.split(":", 1)[-1]
+        return None
+
     def query_subgraph(self, entity_id: str, depth: int = 2) -> Dict[str, Any]:
         """Perform multi-hop traversal around an entity or tower to retrieve connected topological context."""
         if entity_id not in self.graph:
@@ -91,18 +121,7 @@ class GraphRAGBuilder:
             subgraph_nodes.update(next_layer)
             current_layer = next_layer
 
-        sub = self.graph.subgraph(subgraph_nodes)
-
-        nodes_data = [{"id": n, "data": sub.nodes[n]} for n in sub.nodes()]
-        edges_data = [{"source": u, "target": v, "data": sub.get_edge_data(u, v)} for u, v in sub.edges()]
-
-        return {
-            "root_entity": entity_id,
-            "total_nodes": len(nodes_data),
-            "total_edges": len(edges_data),
-            "nodes": nodes_data,
-            "edges": edges_data,
-        }
+        return self._serialize(self.graph.subgraph(subgraph_nodes), root=entity_id)
 
     def find_shortest_path(self, source: str, target: str) -> Optional[List[str]]:
         """Find deterministic multi-hop path between network infrastructure or entities."""

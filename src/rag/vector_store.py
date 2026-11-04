@@ -53,24 +53,14 @@ class DenseVectorStore:
 
         scores = np.dot(self.embeddings, query_vec.T).flatten()
 
-        # Apply metadata pre-filtering if provided
-        candidate_indices = range(len(self.chunks))
-        if metadata_filters:
-            filtered_indices = []
-            for idx in candidate_indices:
-                chunk = self.chunks[idx]
-                match = True
-                for k, v in metadata_filters.items():
-                    chunk_val = getattr(chunk, k, chunk.raw_metadata.get(k))
-                    if chunk_val != v:
-                        match = False
-                        break
-                if match:
-                    filtered_indices.append(idx)
-            candidate_indices = filtered_indices
-
+        # Metadata pre-filtering happens BEFORE ranking; zero-similarity chunks are not "matches" and are dropped so
+        # they cannot receive spurious Reciprocal Rank Fusion credit downstream.
         ranked = sorted(
-            [(self.chunks[i], float(scores[i])) for i in candidate_indices],
+            (
+                (chunk, float(scores[idx]))
+                for idx, chunk in enumerate(self.chunks)
+                if scores[idx] > 0.0 and chunk.matches(metadata_filters)
+            ),
             key=lambda item: item[1],
             reverse=True,
         )

@@ -27,39 +27,58 @@ class OSSAdapter:
         self.circuit = CircuitBreaker("oss_adapter")
 
     def get_tower_telemetry(self, tower_id: str) -> Dict[str, Any]:
-        """Fetch cell tower radio frequency status, backhaul latency, and active alarms."""
+        """Fetch cell tower radio frequency status, backhaul latency, and active alarms.
+
+        Health is *derived from the live alarm feed*; the previous implementation hard-coded TOWER-104 as
+        critical and reported every other tower healthy no matter what the EMS alarms said.
+        """
         def _fetch():
             alarms = data_generator.load_network_alarms()
             active_alarms = [a for a in alarms if a.get("target_component") == tower_id and a.get("status") == "ACTIVE"]
+            node = next((n for n in data_generator.load_network_topology().get("nodes", []) if n.get("id") == tower_id), {})
 
-            if tower_id == "TOWER-104":
-                return {
-                    "tower_id": tower_id,
-                    "name": "Sunset Residential 5G Tower",
-                    "sector": "Sector-7",
-                    "status": "CRITICAL_ALARM",
-                    "rf_power_state": "DEGRADED",
-                    "backhaul_latency_ms": 125.0,
-                    "active_alarms": active_alarms,
-                    "root_cause": "Terrestrial 40G backhaul trunk cut on Sunset Blvd",
-                }
+            severities = {str(a.get("severity", "")).upper() for a in active_alarms}
+            if severities & {"CRITICAL", "MAJOR"}:
+                status, rf_state, latency = "CRITICAL_ALARM", "DEGRADED", 125.0
+            elif active_alarms:
+                status, rf_state, latency = "DEGRADED_WARNING", "ATTENUATED", 12.0
+            else:
+                status, rf_state, latency = "OPERATIONAL", "OPTIMAL", 1.2
+
+            root_cause = next(
+                (a.get("root_cause") for a in active_alarms if str(a.get("severity", "")).upper() in {"CRITICAL", "MAJOR"}),
+                active_alarms[0].get("root_cause") if active_alarms else None,
+            )
             return {
                 "tower_id": tower_id,
-                "name": f"Cell Tower {tower_id}",
-                "sector": "Sector-Normal",
-                "status": "OPERATIONAL",
-                "rf_power_state": "OPTIMAL",
-                "backhaul_latency_ms": 1.2,
-                "active_alarms": [],
-                "root_cause": None,
+                "name": node.get("name", f"Cell Tower {tower_id}"),
+                "sector": node.get("sector") or (active_alarms[0].get("sector") if active_alarms else "Unknown"),
+                "status": status,
+                "rf_power_state": rf_state,
+                "backhaul_latency_ms": latency,
+                "active_alarms": active_alarms,
+                "root_cause": root_cause,
             }
         return self.circuit.call(_fetch)
+
+    def _olt_has_active_fault(self, olt_port: str, subscriber_id: str) -> bool:
+        """Decide whether the PON is faulted from topology state and the live alarm feed (no hard-coded subscriber ids)."""
+        olt_id = olt_port.split("/", 1)[0]
+        node = next((n for n in data_generator.load_network_topology().get("nodes", []) if n.get("id") == olt_id), None)
+        if node and "fault" in str(node.get("status", "")).lower():
+            return True
+
+        sub = data_generator.get_subscriber(subscriber_id)
+        if sub:
+            for alarm in data_generator.get_active_alarms_for_sector(sub.get("assigned_sector", ""), ("CRITICAL", "MAJOR")):
+                if "FIBER_BROADBAND_PON" in alarm.get("impacted_services", []):
+                    return True
+        return False
 
     def run_otdr_fiber_test(self, olt_port: str, subscriber_id: str) -> OTDRTestResult:
         """Simulate Optical Time Domain Reflectometer pulse test to locate fiber breaks or optical degradation."""
         def _execute_otdr():
-            # If port belongs to Sector-7 OLT, simulate verified fiber cut
-            if "OLT-OPTICAL-01" in olt_port or subscriber_id in ["SUB-449182", "SUB-882194"]:
+            if self._olt_has_active_fault(olt_port, subscriber_id):
                 return OTDRTestResult(
                     olt_port=olt_port,
                     subscriber_id=subscriber_id,

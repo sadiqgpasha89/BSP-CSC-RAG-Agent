@@ -1,0 +1,46 @@
+[
+  {
+    "id": "KB-TAR-2026-001",
+    "title": "5G Ultra Max Unlimited 2026",
+    "plan_code": "5G_ULTRA_MAX_2026",
+    "category": "mobile_postpaid",
+    "valid_from": "2026-01-01",
+    "valid_to": "2026-12-31",
+    "is_legacy": false,
+    "monthly_fee_usd": 75.00,
+    "data_allowance": "Unlimited 5G/4G with zero throttling up to 100GB, prioritized QoS",
+    "tethering_hotspot": "50GB high-speed mobile hotspot included; reduced to 512Kbps thereafter",
+    "roaming_included": "Unlimited voice, SMS and 15GB high-speed roaming data in Canada, Mexico, and UK",
+    "international_calling": "Free calls to 50+ global landline destinations",
+    "streaming_perks": "Includes 4K UHD streaming pass and cloud storage 1TB",
+    "cancellation_terms": "No annual contract commitment; 30-day billing cycle reconciliation"
+  },
+  {
+    "id": "KB-TAR-2026-002",
+    "title": "Fiber Pro GigaWave 1Gbps Home Broadband",
+    "plan_code": "FIBER_GIGA_1G_2026",
+    "category": "fixed_broadband",
+    "valid_from": "2026-01-01",
+    "valid_to": "2026-12-31",
+    "is_legacy": false,
+    "monthly_fee_usd": 65.00,
+    "data_allowance": "Symmetrical 1,000 Mbps download / 1,000 Mbps upload; strictly unlimited data cap",
+    "equipment_provided": "Wi-Fi 6E Dual-Band Mesh Gateway (Model: GW-AX6000) with dynamic beamforming",
+    "sla_guarantee": "99.98% uptime SLA with automated micro-credit of $10 per 2 hours of verified outage",
+    "installation_fee": "Free self-install kit or $49.99 for professional on-site optical fusion technician roll"
+  },
+  {
+    "id": "KB-TAR-2026-003",
+    "title": "Global Wanderlust International Roaming Passport 2026",
+    "plan_code": "ROAM_PASSPORT_2026",
+    "category": "roaming_addon",
+    "valid_from": "2026-01-01",
+    "valid_to": "2026-12-31",
+    "is_legacy": false,
+    "daily_rate_usd": 10.00,
+    "monthly_cap_usd": 100.00,
+    "coverage_scope": "Valid across 180+ global tier-1 partner networks",
+    "activation_rule": "Auto-activates on first international cellular packet registration abroad",
+    "throttle_policy": "Full 5G roaming speeds; throttles to 256Kbps only if daily high-speed quota exceeds 5GB"
+  }
+]

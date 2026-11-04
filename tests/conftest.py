@@ -7,6 +7,16 @@ from src.agents.state import AgenticSessionState
 from src.core.security import security_service
 
 
+@pytest.fixture(autouse=True)
+def _reset_shared_global_state():
+    """Singletons are process-wide; undo mutations (e.g. self-healing rebalancing) so tests are order-independent."""
+    from src.rag.hybrid_retriever import hybrid_retriever
+
+    hybrid_retriever.dense_weight = hybrid_retriever.bm25_weight = hybrid_retriever.graph_weight = 1.0
+    yield
+    hybrid_retriever.dense_weight = hybrid_retriever.bm25_weight = hybrid_retriever.graph_weight = 1.0
+
+
 @pytest.fixture
 def test_client():
     """Create synchronous FastAPI TestClient."""

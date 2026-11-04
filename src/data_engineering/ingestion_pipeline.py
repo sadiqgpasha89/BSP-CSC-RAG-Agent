@@ -1,10 +1,11 @@
 """Continuous Ingestion & Layout-Aware Semantic Indexing Pipeline (Pipeline 1)."""
 
+import hashlib
 import json
-import os
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 from pydantic import BaseModel, Field
+from src.core.config import settings
 from src.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -23,12 +24,31 @@ class KnowledgeChunk(BaseModel):
     is_legacy: bool = False
     keywords: List[str] = Field(default_factory=list)
 
+    def matches(self, filters: Optional[Dict[str, Any]]) -> bool:
+        """Evaluate deterministic pre-retrieval metadata filters against this chunk.
+
+        A ``plan_code`` filter admits chunks pinned to that plan *and* plan-agnostic chunks (SOPs, device
+        manuals, error-code references have ``plan_code=None``). Previously those were excluded outright, so
+        grandfathered subscribers could never retrieve any troubleshooting knowledge.
+        """
+        if not filters:
+            return True
+        for key, expected in filters.items():
+            actual = getattr(self, key, None)
+            if actual is None:
+                actual = self.raw_metadata.get(key)
+            if key == "plan_code" and actual is None:
+                continue  # plan-agnostic chunk
+            if actual != expected:
+                return False
+        return True
+
 
 class IngestionPipeline:
     """Ingests raw SOPs, tariffs, and technical manuals into normalized semantic chunks with strict metadata."""
 
-    def __init__(self, data_dir: str = "data/knowledge_base"):
-        self.data_dir = Path(data_dir)
+    def __init__(self, data_dir: Optional[str] = None):
+        self.data_dir = Path(data_dir) if data_dir else Path(settings.data_dir) / "knowledge_base"
 
     def load_and_chunk_all(self) -> List[KnowledgeChunk]:
         """Traverse knowledge base directory, parse JSON/documents and produce chunked embeddings candidates."""
@@ -38,7 +58,7 @@ class IngestionPipeline:
             logger.warning("Knowledge base directory does not exist", path=str(self.data_dir))
             return chunks
 
-        for file_path in self.data_dir.glob("*.json"):
+        for file_path in sorted(self.data_dir.glob("*.json")):
             try:
                 with open(file_path, "r", encoding="utf-8") as f:
                     docs = json.load(f)
@@ -56,7 +76,9 @@ class IngestionPipeline:
     def _process_document(self, doc: Dict[str, Any], source_filename: str) -> List[KnowledgeChunk]:
         """Convert a document into one or more semantically intact chunks with temporal & contractual metadata."""
         chunks: List[KnowledgeChunk] = []
-        doc_id = doc.get("id", f"DOC-{hash(json.dumps(doc, sort_keys=True)) % 1000000}")
+        # Stable content hash: the builtin hash() is salted per process, which made chunk ids non-reproducible.
+        fallback_id = "DOC-" + hashlib.sha1(json.dumps(doc, sort_keys=True).encode("utf-8")).hexdigest()[:8].upper()
+        doc_id = doc.get("id", fallback_id)
         title = doc.get("title", doc.get("device_model", "Telecom Technical Reference"))
         category = doc.get("category", doc.get("topic", "general"))
         plan_code = doc.get("plan_code")
@@ -93,7 +115,7 @@ class IngestionPipeline:
                     valid_from=valid_from,
                     valid_to=valid_to,
                     is_legacy=is_legacy,
-                    keywords=keywords + [plan_code] if plan_code else keywords,
+                    keywords=(keywords + [plan_code]) if plan_code else keywords,
                 )
             )
 
@@ -109,7 +131,7 @@ class IngestionPipeline:
                 f"Keywords: {', '.join(keywords)}\n"
                 f"Observed Symptoms: {symptoms}\n"
                 f"Root Cause Analysis: {rca}\n"
-                f"Standard Operating Troubleshooting Steps:\n" + "\n".join(steps)
+                f"Standard Operating Troubleshooting Steps:\n" + "\n".join(str(step) for step in steps)
             )
             chunks.append(
                 KnowledgeChunk(

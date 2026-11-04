@@ -1,8 +1,9 @@
-.PHONY: install test lint run clean
+.PHONY: install test test-unit test-integration test-edge test-perf run clean
 
 PYTHON = .venv/bin/python
-PYTEST = .venv/bin/pytest
-UVICORN = .venv/bin/uvicorn
+PYTEST = $(PYTHON) -m pytest
+UVICORN = $(PYTHON) -m uvicorn
+PORT ?= 8000
 
 install:
 	uv pip install -r requirements.txt
@@ -23,7 +24,7 @@ test-perf:
 	$(PYTEST) tests/performance/ -v
 
 run:
-	$(UVICORN) src.api.app:app --host 0.0.0.0 --port 8000 --reload
+	$(UVICORN) src.api.app:app --host 0.0.0.0 --port $(PORT) --reload
 
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +

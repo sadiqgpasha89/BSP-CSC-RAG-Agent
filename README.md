@@ -2,7 +2,7 @@
 
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688.svg)](https://fastapi.tiangolo.com)
-[![Pytest Coverage](https://img.shields.io/badge/coverage-89%25-brightgreen.svg)](https://docs.pytest.org/)
+[![Pytest Coverage](https://img.shields.io/badge/tests-pytest-brightgreen.svg)](https://docs.pytest.org/)
 [![Architecture](https://img.shields.io/badge/Cloud-OpenStack%20%2B%20GCP-orange.svg)](https://cloud.google.com/)
 
 A production-grade, autonomous Customer Support Representative (CSR) platform for Tier-1 Telecommunications Operators. Built upon the comprehensive specification in [`enterprise_telco_agentic_rag_architecture.md`](./enterprise_telco_agentic_rag_architecture.md), this system implements a hybrid cloud architecture (OpenStack on-premises + Google Cloud Platform), blending classical Machine Learning, 4-tier Hybrid RAG, a Hierarchical Multi-Agent system, deterministic guardrails, and real-time operational telemetry.
@@ -109,31 +109,31 @@ A production-grade, autonomous Customer Support Representative (CSR) platform fo
 * **Google Cloud Platform (GCP)**: Cloud burst environment deploying Vertex AI Gemini for complex multi-turn reasoning, multimodal network diagnostic images, and BigQuery serverless analytical lakehouses for real-time telemetry streaming and long-term cohort analytics.
 
 ### 2. Decoupled Data Engineering (MLOps & LLMOps Principles)
-* **Continuous Ingestion Pipeline** ([`src/data_engineering/ingestion_pipeline.py`](file:///home/sgp-z/personal-projects/Enterprise-CSC-RAG-Agent/src/data_engineering/ingestion_pipeline.py)): Incremental chunking, metadata extraction, contractual validity range isolation, and dynamic vector indexing.
-* **GraphRAG Topology Builder** ([`src/data_engineering/graph_rag_builder.py`](file:///home/sgp-z/personal-projects/Enterprise-CSC-RAG-Agent/src/data_engineering/graph_rag_builder.py)): NetworkX graph mapping cells, towers, backhaul routers, optical line terminals (OLT), and customer premises equipment (CPE) for upstream incident attribution.
-* **Streaming Event Bus & Analytical Lakehouse** ([`src/data_engineering/stream_processor.py`](file:///home/sgp-z/personal-projects/Enterprise-CSC-RAG-Agent/src/data_engineering/stream_processor.py) & [`src/data_engineering/lakehouse_sink.py`](file:///home/sgp-z/personal-projects/Enterprise-CSC-RAG-Agent/src/data_engineering/lakehouse_sink.py)): Simulates high-throughput Kafka/PubSub stream processing and daily-partitioned BigQuery ingestion.
+* **Continuous Ingestion Pipeline** ([`src/data_engineering/ingestion_pipeline.py`](./src/data_engineering/ingestion_pipeline.py)): Incremental chunking, metadata extraction, contractual validity range isolation, and dynamic vector indexing.
+* **GraphRAG Topology Builder** ([`src/data_engineering/graph_rag_builder.py`](./src/data_engineering/graph_rag_builder.py)): NetworkX graph mapping cells, towers, backhaul routers, optical line terminals (OLT), and customer premises equipment (CPE) for upstream incident attribution.
+* **Streaming Event Bus & Analytical Lakehouse** ([`src/data_engineering/stream_processor.py`](./src/data_engineering/stream_processor.py) & [`src/data_engineering/lakehouse_sink.py`](./src/data_engineering/lakehouse_sink.py)): Simulates high-throughput Kafka/PubSub stream processing and daily-partitioned BigQuery ingestion.
 
 ### 3. Classical ML & NLP Triage Engine
-* **Multi-Intent Classifier** ([`src/datascience/intent_classifier.py`](file:///home/sgp-z/personal-projects/Enterprise-CSC-RAG-Agent/src/datascience/intent_classifier.py)): Supervised multi-label classifier calibrated against confidence threshold $\tau_{intent} = 0.82$. Supports simultaneous secondary intents (e.g., Billing Dispute + Churn Threat).
-* **Frustration Velocity Tracker** ([`src/datascience/sentiment_analyzer.py`](file:///home/sgp-z/personal-projects/Enterprise-CSC-RAG-Agent/src/datascience/sentiment_analyzer.py)): Computes multi-turn sentiment slope $\frac{d(\text{sentiment})}{dt}$. If frustration velocity $< -0.5/\text{turn}$, escalates proactively before customer rage quit.
-* **Predictive Churn Risk Scorer** ([`src/datascience/churn_predictor.py`](file:///home/sgp-z/personal-projects/Enterprise-CSC-RAG-Agent/src/datascience/churn_predictor.py)): Evaluates tenure, billing anomalies, open tickets, and recent network outages against threshold $\delta_{churn} > 0.75$. Triggers specialized Retention Agent workflow.
-* **Dialect & Code-Switching Normalizer** ([`src/datascience/asr_transcriber.py`](file:///home/sgp-z/personal-projects/Enterprise-CSC-RAG-Agent/src/datascience/asr_transcriber.py)): Normalizes noisy ASR transcripts, Hinglish, Spanish-English code-switching, and telco colloquialisms into canonical intent queries.
+* **Multi-Intent Classifier** ([`src/datascience/intent_classifier.py`](./src/datascience/intent_classifier.py)): Supervised multi-label classifier calibrated against confidence threshold $\tau_{intent} = 0.82$. Supports simultaneous secondary intents (e.g., Billing Dispute + Churn Threat).
+* **Frustration Velocity Tracker** ([`src/datascience/sentiment_analyzer.py`](./src/datascience/sentiment_analyzer.py)): Computes multi-turn sentiment slope $\frac{d(\text{sentiment})}{dt}$. If frustration velocity $< -0.5/\text{turn}$, escalates proactively before customer rage quit.
+* **Predictive Churn Risk Scorer** ([`src/datascience/churn_predictor.py`](./src/datascience/churn_predictor.py)): Evaluates tenure, billing anomalies, open tickets, and recent network outages against threshold $\delta_{churn} > 0.75$. Triggers specialized Retention Agent workflow.
+* **Dialect & Code-Switching Normalizer** ([`src/datascience/asr_transcriber.py`](./src/datascience/asr_transcriber.py)): Normalizes noisy ASR transcripts, Hinglish, Spanish-English code-switching, and telco colloquialisms into canonical intent queries.
 
 ### 4. 4-Tier Hybrid RAG with Strict Temporal Filtering
 * **Tier 1 (Dense)**: Cosine similarity vector retrieval over chunk embeddings.
 * **Tier 2 (Sparse)**: Lexical BM25 engine specialized in 3GPP acronyms, hex error codes (`0x4F`), and equipment model numbers (`GW-AX6000`).
 * **Tier 3 (GraphRAG)**: Multi-hop graph exploration of network topology and diagnostic SOP dependencies.
 * **Tier 4 (Neural Reranker & Fusion)**: Reciprocal Rank Fusion (RRF $k=60$) dynamically balanced with neural cross-encoder reranking.
-* **Temporal Metadata Filter** ([`src/rag/temporal_filter.py`](file:///home/sgp-z/personal-projects/Enterprise-CSC-RAG-Agent/src/rag/temporal_filter.py)): Prevents modern plan limits from leaking into grandfathered 2018 plans (e.g., Alex Mercer on 2026 50GB hotspot vs. Elena Rostova on 2018 10GB hotspot).
+* **Temporal Metadata Filter** ([`src/rag/temporal_filter.py`](./src/rag/temporal_filter.py)): Prevents modern plan limits from leaking into grandfathered 2018 plans (e.g., Alex Mercer on 2026 50GB hotspot vs. Elena Rostova on 2018 10GB hotspot).
 
 ### 5. Hierarchical Multi-Agent System & HITL Warm Handoff
-* **SupervisorAgent** ([`src/agents/supervisor.py`](file:///home/sgp-z/personal-projects/Enterprise-CSC-RAG-Agent/src/agents/supervisor.py)): Central meta-planner constructing directed acyclic execution graphs (DAGs), managing shared blackboard state, and detecting infinite agent loops ($\le 6$ steps).
+* **SupervisorAgent** ([`src/agents/supervisor.py`](./src/agents/supervisor.py)): Central meta-planner constructing directed acyclic execution graphs (DAGs), managing shared blackboard state, and detecting infinite agent loops ($\le 6$ steps).
 * **Specialized Worker Agents**:
   * `BillingAgent`: Inspects CDR items, verifies unbilled roaming, applies automatic credits up to $\$50.00$ (with supervisor approval up to $\$100.00$).
   * `NetworkAgent`: Queries tower health, runs virtual Optical Time-Domain Reflectometer (OTDR) fiber tests, and dispatches Diameter soft resets to Ericsson 5G UDM / HSS cores.
   * `ProvisioningAgent`: Handles eSIM profiles and strictly blocks unauthorized SIM swaps lacking Out-of-Band (OOB) MFA authentication.
   * `RetentionAgent`: Formulates targeted loyalty concessions for high-risk subscribers.
-* **Tier-2 Human Handoff (HITL)** ([`src/hitl/`](file:///home/sgp-z/personal-projects/Enterprise-CSC-RAG-Agent/src/hitl/)): Generates structured warm handoff dossiers with verified identity states, attempted actions, root cause recaps, and pre-filled action items.
+* **Tier-2 Human Handoff (HITL)** ([`src/hitl/`](./src/hitl/)): Generates structured warm handoff dossiers with verified identity states, attempted actions, root cause recaps, and pre-filled action items.
 
 ---
 
@@ -182,7 +182,7 @@ The platform measures and calculates metrics across all 6 telecom operational di
 ### 2. Environment Setup
 ```bash
 # Clone repository and navigate to root
-cd /home/sgp-z/personal-projects/Enterprise-CSC-RAG-Agent
+cd BSP-CSC-RAG-Agent
 
 # Create and activate virtual environment
 python3 -m venv .venv
@@ -195,20 +195,37 @@ pip install -r requirements.txt
 ### 3. Run Test Suite
 Execute the comprehensive test suite spanning unit, integration, edge cases, and performance:
 ```bash
-# Run all 49 tests with coverage report
+# Run the full test suite with coverage report
 pytest tests/ -v --cov=src
 ```
 
 ### 4. Launch the Enterprise Platform
 Start the FastAPI server (serving both the REST API and the Command Center Dashboard):
 ```bash
-uvicorn src.api.app:app --host 0.0.0.0 --port 8090
+uvicorn src.api.app:app --host 0.0.0.0 --port 8000
 ```
 
 Open your browser and navigate to:
 ```
-http://localhost:8090/
+http://localhost:8000/
 ```
+
+---
+
+## 🔐 Security & Deployment Notes
+
+| Setting | Development (`ENVIRONMENT=development`, default) | Anything else (staging / production) |
+| :--- | :--- | :--- |
+| `SECRET_KEY` | Insecure dev default allowed | **Required**, >= 32 chars; the app refuses to start otherwise |
+| `ADMIN_API_KEY` | Optional | **Required**; privileged endpoints (`/network/core-reset`, `/network/otdr-test`, `/mlops/self-heal`, `/hitl/*`, `/chat/subscribers`) need header `X-API-Key` |
+| Default customer assurance | `authenticated_mfa` (so the demo console works without a login flow) | `basic_pin`: SIM/eSIM changes and billing credits are denied unless the request carries a valid signed `session_token` |
+| CORS | `CORS_ALLOWED_ORIGINS` allow-list (default: localhost) | same; no wildcard |
+
+Generate secrets with `python -c "import secrets; print(secrets.token_urlsafe(48))"`. Session tokens are minted by `SecurityService.generate_session_token(subscriber_id, msisdn, auth_level)` after your identity provider completes step-up MFA.
+
+Runtime datasets live in `data/` (tracked) and are resolved relative to the project root (override with `DATA_DIR`), so the service can be started from any working directory.
+
+A deep-dive on the architecture, sequence flows and the defects fixed in the engineering review is in [`docs/medium-article.md`](./docs/medium-article.md).
 
 ---
 
@@ -256,7 +273,8 @@ The frontend dashboard provides a dark-mode glassmorphic user interface for NOC 
 | `POST` | `/api/v1/mlops/self-heal` | Triggers automated self-healing mitigation policies |
 | `GET` | `/api/v1/hitl/queue` | Returns pending Tier-2 human escalation dossiers |
 | `POST` | `/api/v1/hitl/resolve` | Resolves an active escalation dossier |
-| `POST` | `/api/v1/rag/query` | Direct test endpoint for the 4-tier Hybrid RAG engine |
+| `POST` | `/api/v1/rag/search` | Direct test endpoint for the 4-tier Hybrid RAG engine |
+| `GET` | `/api/v1/rag/subgraph/{entity_id}` | Traverses the GraphRAG neighbourhood around an entity |
 
 ---
 

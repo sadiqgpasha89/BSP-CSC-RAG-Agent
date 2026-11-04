@@ -1,7 +1,7 @@
 """Telecom Acoustic ASR Transcription & Dialect Normalization (Stage 1)."""
 
 import re
-from typing import Dict, List, Tuple
+from typing import Dict, Optional
 from pydantic import BaseModel
 
 
@@ -30,17 +30,20 @@ class ASRTranscriber:
         "sin servicio": "no service",
     }
 
-    def transcribe(self, simulated_audio_text: str, ground_truth: str = None) -> ASRTranscriptionResult:
+    def transcribe(self, simulated_audio_text: str, ground_truth: Optional[str] = None) -> ASRTranscriptionResult:
         """Normalize colloquial dialect code-switching and calculate WER if ground truth provided."""
         text = simulated_audio_text.strip()
         normalized = text.lower()
         has_code_switching = False
         substitutions = {}
 
-        for pattern, replacement in self.CODE_SWITCH_MAPPINGS.items():
-            if pattern in normalized:
+        # Longest phrases first and whole-phrase matches only ("recarga" must not rewrite "recargable").
+        for pattern in sorted(self.CODE_SWITCH_MAPPINGS, key=len, reverse=True):
+            replacement = self.CODE_SWITCH_MAPPINGS[pattern]
+            regex = re.compile(rf"\b{re.escape(pattern)}\b")
+            if regex.search(normalized):
                 has_code_switching = True
-                normalized = normalized.replace(pattern, replacement)
+                normalized = regex.sub(replacement, normalized)
                 substitutions[pattern] = replacement
 
         wer = self.calculate_wer(reference=ground_truth or text, hypothesis=text)

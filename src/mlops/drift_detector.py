@@ -24,6 +24,7 @@ class DriftReport(BaseModel):
     current_rag_similarity_ratio: float
     mitigation_triggered: bool
     recommended_actions: List[str] = Field(default_factory=list)
+    input_source: str = "caller_supplied"  # provenance of the analysed window (live telemetry vs synthetic sample)
 
 
 class MultiDimensionalDriftDetector:
