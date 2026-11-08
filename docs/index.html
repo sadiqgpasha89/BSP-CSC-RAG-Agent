@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telco Agentic RAG Support Platform</title>
+<meta name="description" content="A zero-trust, multi-agent RAG platform for Tier-1 telecom customer support: PII scrubbing, 4-tier hybrid retrieval, guarded tool use, and human warm handoff.">
+<meta property="og:title" content="Telco Agentic RAG Support Platform">
+<meta property="og:description" content="Zero-trust agentic RAG for telecom customer support. Use case, architecture and scenarios.">
+<meta property="og:type" content="website">
+<style>
+  :root {
+    --bg: #fafaf7; --surface: #ffffff; --surface-2: #f2f1ec;
+    --text: #1c1b18; --muted: #5f5d55; --border: #dedcd2;
+    --accent: #0b6e69; --accent-ink: #ffffff; --accent-soft: #dff1ee;
+    --warn: #9a5b00; --warn-soft: #fbefd5;
+    --bad: #a3321f; --bad-soft: #f8e1dc;
+    --code-bg: #1c1b18; --code-text: #e9e7dd;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12130f; --surface: #1b1c17; --surface-2: #23241e;
+      --text: #ecebe3; --muted: #a3a195; --border: #33342c;
+      --accent: #4fc4bb; --accent-ink: #08201e; --accent-soft: #173533;
+      --warn: #e8b35a; --warn-soft: #33290f;
+      --bad: #ef8f7b; --bad-soft: #38201b;
+      --code-bg: #0b0c09; --code-text: #e9e7dd;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12130f; --surface: #1b1c17; --surface-2: #23241e;
+    --text: #ecebe3; --muted: #a3a195; --border: #33342c;
+    --accent: #4fc4bb; --accent-ink: #08201e; --accent-soft: #173533;
+    --warn: #e8b35a; --warn-soft: #33290f;
+    --bad: #ef8f7b; --bad-soft: #38201b;
+    --code-bg: #0b0c09; --code-text: #e9e7dd;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 17px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  }
+  a { color: var(--accent); }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+  header.top {
+    position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(8px); border-bottom: 1px solid var(--border);
+  }
+  header.top .wrap { display: flex; align-items: center; gap: 16px; height: 56px; }
+  .brand { font-weight: 700; text-decoration: none; color: var(--text); white-space: nowrap; }
+  nav { display: flex; gap: 16px; margin-left: auto; overflow-x: auto; }
+  nav a { color: var(--muted); text-decoration: none; font-size: 15px; white-space: nowrap; }
+  nav a:hover { color: var(--text); }
+  .theme-btn {
+    background: none; border: 1px solid var(--border); color: var(--text); border-radius: 8px;
+    width: 36px; height: 36px; cursor: pointer; font-size: 16px; flex: none;
+  }
+  section { padding: 64px 0 8px; }
+  h1 { font-size: clamp(2rem, 5vw, 3.2rem); line-height: 1.1; margin: 0 0 16px; letter-spacing: -0.02em; }
+  h2 { font-size: clamp(1.5rem, 3vw, 2rem); margin: 0 0 8px; letter-spacing: -0.01em; }
+  h3 { font-size: 1.05rem; margin: 0 0 6px; }
+  p { margin: 0 0 14px; }
+  .lead { font-size: 1.2rem; color: var(--muted); max-width: 720px; }
+  .eyebrow { color: var(--accent); font-weight: 600; font-size: 14px; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 10px; }
+  .hero { padding-top: 72px; }
+  .btns { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
+  .btn {
+    display: inline-block; padding: 10px 18px; border-radius: 10px; text-decoration: none; font-weight: 600;
+    border: 1px solid var(--border); color: var(--text); background: var(--surface);
+  }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 28px; }
+  .badge { font-size: 13px; padding: 4px 10px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); color: var(--muted); }
+  .grid { display: grid; gap: 16px; margin-top: 24px; }
+  .g2 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+  .g3 { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; }
+  .card p { margin: 0; color: var(--muted); font-size: 15.5px; }
+  .card .tag { display: inline-block; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 6px; margin-bottom: 8px; }
+  .tag.bad { background: var(--bad-soft); color: var(--bad); }
+  .tag.good { background: var(--accent-soft); color: var(--accent); }
+  .problem .card { border-left: 4px solid var(--bad); }
+  .problem .fix { color: var(--text); margin-top: 8px; }
+  .problem .fix b { color: var(--accent); }
+  /* pipeline */
+  .pipeline { list-style: none; padding: 0; margin: 28px 0 0; display: grid; gap: 10px; counter-reset: stage; }
+  .pipeline li {
+    counter-increment: stage; display: grid; grid-template-columns: 44px 1fr; gap: 14px; align-items: start;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px;
+  }
+  .pipeline li::before {
+    content: counter(stage); width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--accent-soft); color: var(--accent); font-weight: 700;
+  }
+  .pipeline b { display: block; }
+  .pipeline span { color: var(--muted); font-size: 15.5px; }
+  .pipeline li.branch { border-style: dashed; }
+  .pipeline li.branch::before { content: "↳"; background: var(--warn-soft); color: var(--warn); }
+  /* scenarios */
+  .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
+  .tab {
+    border: 1px solid var(--border); background: var(--surface); color: var(--text); padding: 8px 14px;
+    border-radius: 999px; cursor: pointer; font: inherit; font-size: 15px;
+  }
+  .tab[aria-selected="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .panel { margin-top: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
+  .panel[hidden] { display: none; }
+  .chat { display: grid; gap: 8px; margin: 12px 0 16px; }
+  .msg { max-width: 85%; padding: 10px 14px; border-radius: 14px; font-size: 15.5px; }
+  .msg.user { background: var(--surface-2); justify-self: start; border-bottom-left-radius: 4px; }
+  .msg.bot { background: var(--accent-soft); justify-self: end; border-bottom-right-radius: 4px; }
+  .trace { margin: 0; padding: 0; list-style: none; font-size: 15px; display: grid; gap: 6px; }
+  .trace li { padding-left: 22px; position: relative; color: var(--muted); }
+  .trace li::before { content: "▸"; position: absolute; left: 0; color: var(--accent); }
+  .trace li b { color: var(--text); }
+  .verdict { margin-top: 14px; padding: 10px 14px; border-radius: 10px; background: var(--warn-soft); color: var(--text); font-size: 15px; }
+  /* tables, code */
+  table { width: 100%; border-collapse: collapse; font-size: 15px; margin-top: 20px; background: var(--surface); border-radius: 12px; overflow: hidden; border: 1px solid var(--border); }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { background: var(--surface-2); font-size: 13px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+  tr:last-child td { border-bottom: none; }
+  .scroll-x { overflow-x: auto; }
+  pre { background: var(--code-bg); color: var(--code-text); padding: 16px 18px; border-radius: 12px; overflow-x: auto; font-size: 14px; line-height: 1.55; margin: 16px 0 0; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  p code, td code, li code { background: var(--surface-2); padding: 1px 6px; border-radius: 5px; font-size: .9em; }
+  .note { margin-top: 24px; border: 1px solid var(--border); border-left: 4px solid var(--warn); background: var(--warn-soft); border-radius: 10px; padding: 14px 18px; font-size: 15.5px; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-top: 24px; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .stat b { display: block; font-size: 1.7rem; color: var(--accent); line-height: 1.1; }
+  .stat span { color: var(--muted); font-size: 14px; }
+  footer { margin-top: 72px; padding: 28px 0 48px; border-top: 1px solid var(--border); color: var(--muted); font-size: 14.5px; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  @media (max-width: 640px) {
+    nav { display: none; }
+    section { padding-top: 48px; }
+    .msg { max-width: 95%; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#top">Telco Agentic RAG</a>
+    <nav aria-label="Sections">
+      <a href="#problem">Problem</a>
+      <a href="#how">How it works</a>
+      <a href="#scenarios">Scenarios</a>
+      <a href="#capabilities">Capabilities</a>
+      <a href="#run">Run it</a>
+    </nav>
+    <button class="theme-btn" id="theme" aria-label="Toggle color theme" title="Toggle color theme">◐</button>
+  </div>
+</header>
+
+<main id="top">
+
+<section class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Use case · Telecom customer support</div>
+    <h1>An AI support agent that can safely touch a telco's billing, network and SIMs.</h1>
+    <p class="lead">Most RAG demos answer questions. A telecom support agent also issues credits, resets network cores and re-provisions SIMs, under fraud, regulation and outages. This platform shows how to build one where the model proposes and deterministic code decides.</p>
+    <div class="btns">
+      <a class="btn primary" href="#scenarios">See it handle a case</a>
+      <a class="btn" href="https://github.com/sadiqgpasha89/BSP-CSC-RAG-Agent">View on GitHub</a>
+      <a class="btn" href="https://github.com/sadiqgpasha89/BSP-CSC-RAG-Agent/blob/main/docs/medium-article.md">Read the deep-dive</a>
+    </div>
+    <div class="badges">
+      <span class="badge">Python 3.12</span><span class="badge">FastAPI</span>
+      <span class="badge">Multi-agent DAG</span><span class="badge">4-tier hybrid RAG</span>
+      <span class="badge">OpenStack + GCP</span><span class="badge">Human-in-the-loop</span>
+    </div>
+    <div class="stats">
+      <div class="stat"><b>8</b><span>pipeline stages, ingress to delivery</span></div>
+      <div class="stat"><b>4</b><span>retrieval tiers fused with RRF</span></div>
+      <div class="stat"><b>4</b><span>specialist agents under one supervisor</span></div>
+      <div class="stat"><b>105</b><span>tests, 91% coverage</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="problem" class="problem">
+  <div class="wrap">
+    <div class="eyebrow">The problem</div>
+    <h2>Why telecom support is a hard agent problem</h2>
+    <p class="lead">Five real-world constraints shaped the design. A generic "LLM plus vector database" stack fails on each of them.</p>
+    <div class="grid g2">
+      <div class="card"><span class="tag bad">CPNI / PII regulation</span>
+        <h3>Sensitive data leaks into prompts and logs</h3>
+        <p>Card numbers, PINs and phone numbers end up in model prompts, logs and handoff notes.</p>
+        <p class="fix"><b>Fix:</b> a scrubber tokenizes PII before anything reaches a model and restores it only at delivery.</p></div>
+      <div class="card"><span class="tag bad">SIM-swap fraud</span>
+        <h3>An empathetic model gets socially engineered</h3>
+        <p>"I'm stranded and lost my phone" is exactly what an attacker says to get an eSIM.</p>
+        <p class="fix"><b>Fix:</b> SIM and eSIM changes are blocked in policy code unless out-of-band MFA is verified.</p></div>
+      <div class="card"><span class="tag bad">Outage storms</span>
+        <h3>One fiber cut becomes thousands of chats</h3>
+        <p>Identical "my internet is dead" conversations exhaust GPUs and back-end connection pools.</p>
+        <p class="fix"><b>Fix:</b> a geofence deflects subscribers on affected towers with a broadcast message.</p></div>
+      <div class="card"><span class="tag bad">Grandfathered contracts</span>
+        <h3>Search surfaces the wrong plan</h3>
+        <p>Vector search shows the 2026 plan's 50 GB hotspot to a 2018 customer who contractually has 10 GB.</p>
+        <p class="fix"><b>Fix:</b> retrieval is filtered by the subscriber's activation date before ranking.</p></div>
+      <div class="card"><span class="tag bad">Legacy OSS/BSS</span>
+        <h3>Slow back ends invite hallucination</h3>
+        <p>A billing database that takes 15 seconds to answer hangs the agent or tempts it to guess.</p>
+        <p class="fix"><b>Fix:</b> circuit breakers isolate failing tools and hand off to a human.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="wrap">
+    <div class="eyebrow">How it works</div>
+    <h2>One request, eight stages</h2>
+    <p class="lead">The probabilistic parts propose. Deterministic code disposes. Anything that moves money, changes a SIM or touches CPNI is gated by policy an LLM can't talk its way past.</p>
+    <ol class="pipeline">
+      <li><div><b>PII / CPNI scrubber</b><span>Regex and NER replace identifiers with salted tokens before any model sees the text.</span></div></li>
+      <li><div><b>Inference router</b><span>Predictable or PII-heavy work goes to on-prem vLLM (Llama 3.1 70B, zero marginal token cost). Complex multi-turn or multimodal work bursts to Gemini on GCP.</span></div></li>
+      <li><div><b>Classical ML triage</b><span>Multi-intent classifier, frustration velocity (sentiment slope per turn), churn-risk score, and dialect / code-switching normalizer for noisy ASR.</span></div></li>
+      <li><div><b>4-tier hybrid RAG</b><span>Dense vectors, BM25 for hex codes and model numbers, GraphRAG over network topology, then reciprocal-rank fusion and reranking, with strict temporal filtering.</span></div></li>
+      <li><div><b>Hierarchical multi-agent DAG</b><span>A supervisor plans a graph of work for Billing, Network, Provisioning and Retention agents over shared state, and stops loops after 6 steps.</span></div></li>
+      <li><div><b>OSS / BSS tool adapters</b><span>Billing credits, OTDR fiber tests, HSS/UDM resets and eSIM provisioning, each behind a circuit breaker.</span></div></li>
+      <li><div><b>Deterministic guardrails</b><span>Grounding and factuality checks, regulatory filters and CPNI-leak prevention on every draft answer.</span></div></li>
+      <li><div><b>Delivery or warm handoff</b><span>Safe, grounded answers go to the customer with tokens restored. Anything else goes to a Tier-2 human with a pre-filled dossier.</span></div></li>
+    </ol>
+  </div>
+</section>
+
+<section id="scenarios">
+  <div class="wrap">
+    <div class="eyebrow">Scenarios</div>
+    <h2>See how it handles real cases</h2>
+    <p class="lead">Four edge cases the platform is built and tested for. Pick one. The conversations are illustrative paraphrases, not recorded output.</p>
+
+    <div class="tabs" role="tablist" aria-label="Scenarios">
+      <button class="tab" role="tab" aria-selected="true" aria-controls="p0" id="t0">Billing dispute</button>
+      <button class="tab" role="tab" aria-selected="false" aria-controls="p1" id="t1">SIM-swap attempt</button>
+      <button class="tab" role="tab" aria-selected="false" aria-controls="p2" id="t2">Outage storm</button>
+      <button class="tab" role="tab" aria-selected="false" aria-controls="p3" id="t3">Legacy plan trap</button>
+    </div>
+
+    <div class="panel" role="tabpanel" id="p0" aria-labelledby="t0">
+      <h3>Verified customer disputes a roaming charge</h3>
+      <div class="chat">
+        <div class="msg user">I was charged for roaming on a trip I never took. Can you fix this?</div>
+        <div class="msg bot">I found an unbilled-roaming mismatch on your last invoice and applied a credit. You'll see it on your next statement.</div>
+      </div>
+      <ul class="trace">
+        <li><b>Scrub:</b> the account number and phone number are tokenized.</li>
+        <li><b>Triage:</b> billing dispute intent, with a secondary churn signal.</li>
+        <li><b>Plan:</b> the supervisor routes to the Billing agent.</li>
+        <li><b>Act:</b> the agent inspects call records, confirms the roaming error, and credits the account. Credits up to $50 are automatic; up to $100 need supervisor approval.</li>
+        <li><b>Guardrail:</b> the answer is checked against the retrieved invoice facts.</li>
+      </ul>
+      <div class="verdict"><b>Outcome:</b> resolved without a human, with an audit trail of every step.</div>
+    </div>
+
+    <div class="panel" role="tabpanel" id="p1" aria-labelledby="t1" hidden>
+      <h3>Someone asks for a new eSIM with no identity proof</h3>
+      <div class="chat">
+        <div class="msg user">I lost my phone and I'm stranded. Please move my number to a new eSIM right now.</div>
+        <div class="msg bot">I can't do that until we verify it's you. I've sent a verification request, and I can connect you to a specialist.</div>
+      </div>
+      <ul class="trace">
+        <li><b>Triage:</b> urgency and emotion detected. This is the classic pressure pattern.</li>
+        <li><b>Identity check:</b> the session's assurance level is below out-of-band MFA.</li>
+        <li><b>Policy:</b> the Provisioning agent is blocked in code, not by a prompt instruction.</li>
+        <li><b>Handoff:</b> a Tier-2 dossier records the request, the block and the reason.</li>
+      </ul>
+      <div class="verdict"><b>Outcome:</b> the sympathetic story doesn't change the result. No SIM change without verified MFA.</div>
+    </div>
+
+    <div class="panel" role="tabpanel" id="p2" aria-labelledby="t2" hidden>
+      <h3>A fiber cut takes down a whole sector</h3>
+      <div class="chat">
+        <div class="msg user">My internet has been dead for an hour. Please help!</div>
+        <div class="msg bot">We're aware of a fiber cut affecting your area (Sector 7). Engineers are working on it, and we'll message you when service is restored.</div>
+      </div>
+      <ul class="trace">
+        <li><b>Locate:</b> the subscriber is attached to a tower with an active critical alarm.</li>
+        <li><b>Geofence:</b> routine inquiries are deflected with a broadcast message before any expensive reasoning.</li>
+        <li><b>Protect:</b> GPU capacity and human queues are saved for cases that actually need them.</li>
+      </ul>
+      <div class="verdict"><b>Outcome:</b> thousands of duplicate chats are answered with one cheap, accurate message.</div>
+    </div>
+
+    <div class="panel" role="tabpanel" id="p3" aria-labelledby="t3" hidden>
+      <h3>Two customers ask about hotspot data</h3>
+      <div class="chat">
+        <div class="msg user">How much hotspot data do I get each month?</div>
+        <div class="msg bot">On your 2018 plan, 10 GB. (A customer activated in 2026 would hear 50 GB.)</div>
+      </div>
+      <ul class="trace">
+        <li><b>Retrieve:</b> dense, sparse and graph search return candidate passages.</li>
+        <li><b>Filter:</b> the temporal filter keeps only documents valid on the subscriber's activation date.</li>
+        <li><b>Answer:</b> the response cites the contract the customer actually has.</li>
+      </ul>
+      <div class="verdict"><b>Outcome:</b> no accidental promise of a benefit the customer doesn't have.</div>
+    </div>
+  </div>
+</section>
+
+<section id="capabilities">
+  <div class="wrap">
+    <div class="eyebrow">Capabilities</div>
+    <h2>What's in the platform</h2>
+    <div class="grid g3">
+      <div class="card"><span class="tag good">Cloud</span><h3>Hybrid cloud arbitrage</h3><p>Sensitive and predictable traffic stays on private OpenStack. Complex or multimodal work bursts to GCP, with live cost tracking.</p></div>
+      <div class="card"><span class="tag good">Retrieval</span><h3>4-tier hybrid RAG</h3><p>Dense, BM25, GraphRAG and fusion, filtered by contract validity dates.</p></div>
+      <div class="card"><span class="tag good">Agents</span><h3>Supervisor plus specialists</h3><p>Billing, Network, Provisioning and Retention agents with loop detection and bounded autonomy.</p></div>
+      <div class="card"><span class="tag good">Safety</span><h3>Zero-trust by default</h3><p>PII scrubbing, signed session tokens, admin API keys, circuit breakers and a deterministic guardrail layer.</p></div>
+      <div class="card"><span class="tag good">Humans</span><h3>Tier-2 warm handoff</h3><p>Dossiers with verified identity state, attempted actions, root cause and suggested next steps.</p></div>
+      <div class="card"><span class="tag good">MLOps</span><h3>Drift and self-healing</h3><p>PSI and K-S drift monitors, canary model registry, and one-click retuning of RAG weights.</p></div>
+    </div>
+
+    <h3 style="margin-top:36px">Metrics across six dimensions</h3>
+    <div class="scroll-x">
+    <table>
+      <thead><tr><th>Category</th><th>Examples</th></tr></thead>
+      <tbody>
+        <tr><td>Business</td><td>First contact resolution, handling time, deflection, CSAT, NPS, cost per interaction</td></tr>
+        <tr><td>System</td><td>P95/P99 latency, time to first token, inter-token latency, GPU utilization</td></tr>
+        <tr><td>RAG</td><td>Context precision and recall, faithfulness, answer relevance, hallucination rate</td></tr>
+        <tr><td>Agentic</td><td>Path efficiency, tool success rate, plan deviation, goal completion</td></tr>
+        <tr><td>ML / NLP</td><td>Intent macro-F1, NER F1, ASR word error rate, churn ROC-AUC</td></tr>
+        <tr><td>Cost</td><td>OpenStack vs. GCP savings, blended cost per 1K tokens</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3 style="margin-top:36px">Command Center dashboard</h3>
+    <p>A web console for support supervisors, NOC engineers and AI ops: an omnichannel chat console with a live reasoning trace, a network topology and alarm view, cost arbitrage counters, drift monitors, the six-category metrics board, and the human escalation queue.</p>
+
+    <div class="note"><b>Honest scope:</b> this is a high-fidelity reference implementation. There are no live vLLM or Vertex calls. Response synthesis is deterministic templating, embeddings are TF-IDF vectors, and the reranker is a lexical heuristic. The orchestration, policy, security and retrieval logic are real and tested, and the model endpoints sit behind the seams where production ones would plug in.</div>
+  </div>
+</section>
+
+<section id="run">
+  <div class="wrap">
+    <div class="eyebrow">Run it</div>
+    <h2>Try it locally</h2>
+    <p>You need Python 3.11 or 3.12.</p>
+<pre><code>git clone https://github.com/sadiqgpasha89/BSP-CSC-RAG-Agent.git
+cd BSP-CSC-RAG-Agent
+python3 -m venv .venv &amp;&amp; source .venv/bin/activate
+pip install -r requirements.txt
+
+pytest tests/ -v --cov=src                      # run the test suite
+uvicorn src.api.app:app --port 8000             # then open http://localhost:8000/</code></pre>
+    <div class="btns">
+      <a class="btn primary" href="https://github.com/sadiqgpasha89/BSP-CSC-RAG-Agent">Source on GitHub</a>
+      <a class="btn" href="https://github.com/sadiqgpasha89/BSP-CSC-RAG-Agent/blob/main/enterprise_telco_agentic_rag_architecture.md">Full architecture spec</a>
+      <a class="btn" href="https://github.com/sadiqgpasha89/BSP-CSC-RAG-Agent/blob/main/docs/medium-article.md">Engineering write-up</a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    Built by <a href="https://github.com/sadiqgpasha89">sadiqgpasha89</a> · <a href="https://github.com/sadiqgpasha89/BSP-CSC-RAG-Agent">BSP-CSC-RAG-Agent</a>
+  </div>
+</footer>
+
+<script>
+(function () {
+  // scenario tabs
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab'));
+  function select(i) {
+    tabs.forEach(function (t, j) {
+      var on = i === j;
+      t.setAttribute('aria-selected', on);
+      t.tabIndex = on ? 0 : -1;
+      document.getElementById('p' + j).hidden = !on;
+    });
+  }
+  tabs.forEach(function (t, i) {
+    t.addEventListener('click', function () { select(i); });
+    t.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowRight') { select((i + 1) % tabs.length); tabs[(i + 1) % tabs.length].focus(); }
+      if (e.key === 'ArrowLeft') { var k = (i + tabs.length - 1) % tabs.length; select(k); tabs[k].focus(); }
+    });
+  });
+  select(0);
+
+  // theme toggle
+  var root = document.documentElement;
+  try { var saved = localStorage.getItem('theme'); if (saved) root.setAttribute('data-theme', saved); } catch (e) {}
+  document.getElementById('theme').addEventListener('click', function () {
+    var dark = root.getAttribute('data-theme') === 'dark' ||
+      (!root.getAttribute('data-theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    var next = dark ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('theme', next); } catch (e) {}
+  });
+})();
+</script>
+</body>
+</html>

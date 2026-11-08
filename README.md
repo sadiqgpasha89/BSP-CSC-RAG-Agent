@@ -5,6 +5,8 @@
 [![Pytest Coverage](https://img.shields.io/badge/tests-pytest-brightgreen.svg)](https://docs.pytest.org/)
 [![Architecture](https://img.shields.io/badge/Cloud-OpenStack%20%2B%20GCP-orange.svg)](https://cloud.google.com/)
 
+🌐 **Live project page:** [https://sadiqgpasha89.github.io/BSP-CSC-RAG-Agent/](https://sadiqgpasha89.github.io/BSP-CSC-RAG-Agent/) — a quick, visual walkthrough of the use case, architecture and edge-case scenarios.
+
 A production-grade, autonomous Customer Support Representative (CSR) platform for Tier-1 Telecommunications Operators. Built upon the comprehensive specification in [`enterprise_telco_agentic_rag_architecture.md`](./enterprise_telco_agentic_rag_architecture.md), this system implements a hybrid cloud architecture (OpenStack on-premises + Google Cloud Platform), blending classical Machine Learning, 4-tier Hybrid RAG, a Hierarchical Multi-Agent system, deterministic guardrails, and real-time operational telemetry.
 
 ---
