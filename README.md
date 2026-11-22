@@ -95,6 +95,7 @@ make run                        # or: python -m uvicorn src.api.app:app --port 8
 - API docs: <http://localhost:8000/docs>
 - Tests: `make test` (or `python -m pytest tests -q`)
 - Diagrams: `make diagrams` (needs `@mermaid-js/mermaid-cli`)
+- Deploy to Google Cloud Run: `PROJECT_ID=... bash deploy/cloudrun/deploy.sh` (see [Deployment](./docs/DEPLOYMENT.md); Vercel is not suitable while state is in memory)
 
 Try these in the chat page: "Explain my bill", "Recharge $10", "I want to change my plan to 5G Ultra Max", "I need a SIM replacement, new ICCID 8901234567890123456" (then enter the code the sandbox sends), "My internet is down", "I want to complain about poor service", "Talk to a human". Payment method ids `pm_decline`, `pm_pending`, `pm_timeout` reproduce failure paths in tests.
 
@@ -138,6 +139,7 @@ Policies live in [`config/policies.json`](./config/policies.json): actions, risk
 | [Threat model](./docs/THREAT_MODEL.md) | Threats, mitigations, tests, residual risk |
 | [API contracts](./docs/API_CONTRACTS.md) | Routes, auth, payload semantics |
 | [KPI definitions](./docs/KPI_DEFINITIONS.md) | Formulas, caveats, baseline plan |
+| [Deployment](./docs/DEPLOYMENT.md) | Cloud Run vs Vercel decision, deploy steps, limits |
 | [Runbook](./docs/RUNBOOK.md) | Run, configure, monitor, incidents, release |
 | [Implementation status](./IMPLEMENTATION_STATUS.md) | Every plan item: status, code path, test path, gap |
 | [Archive](./docs/archive/) | Earlier architecture spec and engineering article (historical) |

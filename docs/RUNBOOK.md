@@ -20,7 +20,7 @@ Demo logins: identifier `SUB-882194`, `SUB-556201`, `SUB-102948`, `SUB-449182` o
 2. Set `CORS_ALLOWED_ORIGINS` to the real origins. Put TLS and an API gateway/WAF in front.
 3. Set `WHATSAPP_APP_SECRET` and `WHATSAPP_VERIFY_TOKEN` if the WhatsApp channel is used; without the secret the webhook refuses traffic outside development.
 4. Replace the sandbox PIN login with the operator's identity provider before any real customer uses it.
-5. Container: `docker build -t bsp-csc .` then `docker run -p 8000:8000 --env-file .env bsp-csc` (Dockerfile provided, not tested here).
+5. Container: `docker build -t bsp-csc .` then `docker run -p 8000:8000 --env-file .env bsp-csc` (Dockerfile provided, not tested here). Cloud deployment: see `docs/DEPLOYMENT.md`; run a single instance while state is in memory.
 
 ## 3. Health and monitoring
 

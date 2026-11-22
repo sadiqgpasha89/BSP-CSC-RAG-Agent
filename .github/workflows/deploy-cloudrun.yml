@@ -1,0 +1,29 @@
+name: deploy-cloudrun
+# Manual deploy to Cloud Run using Workload Identity Federation (no long-lived keys).
+# One-time setup is described in docs/DEPLOYMENT.md. Set repository variables:
+#   GCP_PROJECT_ID, GCP_REGION, GCP_WORKLOAD_IDENTITY_PROVIDER, GCP_SERVICE_ACCOUNT
+# and create the Secret Manager secrets bsp-secret-key and bsp-admin-api-key (deploy.sh does this).
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: bsp-csc-rag-agent
+          region: ${{ vars.GCP_REGION }}
+          source: .
+          flags: >-
+            --min-instances=1 --max-instances=1 --cpu=1 --memory=1Gi --concurrency=40 --cpu-boost
+            --allow-unauthenticated
+          env_vars: ENVIRONMENT=staging,LOG_LEVEL=INFO
+          secrets: SECRET_KEY=bsp-secret-key:latest,ADMIN_API_KEY=bsp-admin-api-key:latest
