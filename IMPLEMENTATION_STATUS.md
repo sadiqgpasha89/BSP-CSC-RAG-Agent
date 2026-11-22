@@ -148,7 +148,7 @@ Exclusions honoured: no autonomous network change; SIM swap/eSIM/porting need st
 | 9 Admin config | partial |
 | 10 Dashboard, events, audit, tracing, alerts | partial (alerts and tracing export not started) |
 | 11 Test suite | unit, integration, security/adversarial, multilingual done; contract and evaluation tests partial; browser E2E not started |
-| 12 CI/CD, containers | CI workflow, Dockerfile, Cloud Run deploy script and manual deploy workflow added (`docs/DEPLOYMENT.md`), **none executed here**; no Kubernetes manifests; rollback documented in `docs/RUNBOOK.md` |
+| 12 CI/CD, containers | CI workflow, Dockerfile, Cloud Run and Vercel deploy configs and a manual Cloud Run deploy workflow added (`docs/DEPLOYMENT.md`), **none executed here**; no Kubernetes manifests; rollback documented in `docs/RUNBOOK.md` |
 | 13 Diagrams and docs | done (`diagrams/`, `docs/`) |
 | 14 KPI definitions | done (`docs/KPI_DEFINITIONS.md`); baseline measurement needs real traffic |
 

@@ -225,8 +225,8 @@ toml = [
 ]
 
 [[package]]
-name = "enterprise-telco-agentic-rag"
-version = "1.0.0"
+name = "bsp-csc-rag-agent"
+version = "2.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
