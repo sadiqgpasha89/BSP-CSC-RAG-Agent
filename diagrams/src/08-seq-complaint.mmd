@@ -1,0 +1,21 @@
+sequenceDiagram
+  actor C as Customer
+  participant S as Supervisor
+  participant CC as CustomerCareAgent
+  participant G as ToolGateway
+  participant TK as Ticketing
+  C->>S: I want to complain about poor service
+  S->>CC: handle
+  CC->>G: ticket.create
+  G->>G: consent case_processing? (default no)
+  G-->>C: Need your permission. Reply I agree.
+  C->>S: I agree
+  S->>S: record consent, resume original request
+  G-->>C: Confirm: register complaint? (single-use confirmation)
+  C->>S: YES
+  G->>TK: create (dedup within window, priority classified)
+  TK-->>G: TCK-xxxx
+  G-->>C: Reference TCK-xxxx and expected next step
+  C->>S: Status of TCK-xxxx?
+  CC->>G: ticket.get
+  G-->>C: Status from ticketing system

@@ -1,0 +1,72 @@
+{
+  "SUB-882194": [
+    {
+      "method_id": "pm_ok",
+      "label": "Visa ending 4532",
+      "kind": "card"
+    },
+    {
+      "method_id": "pm_decline",
+      "label": "Mastercard ending 1181 (sandbox: declines)",
+      "kind": "card"
+    },
+    {
+      "method_id": "pm_timeout",
+      "label": "Bank transfer ref 9921 (sandbox: provider timeout)",
+      "kind": "bank"
+    }
+  ],
+  "SUB-102948": [
+    {
+      "method_id": "pm_ok",
+      "label": "Visa ending 7710",
+      "kind": "card"
+    }
+  ],
+  "SUB-449182": [
+    {
+      "method_id": "pm_ok",
+      "label": "Visa ending 2208",
+      "kind": "card"
+    },
+    {
+      "method_id": "pm_pending",
+      "label": "Bank debit ending 6612 (sandbox: settles slowly)",
+      "kind": "bank"
+    }
+  ],
+  "SUB-773019": [
+    {
+      "method_id": "pm_ok",
+      "label": "Visa ending 9034",
+      "kind": "card"
+    },
+    {
+      "method_id": "pm_pending",
+      "label": "Bank debit ending 3301 (sandbox: settles slowly)",
+      "kind": "bank"
+    },
+    {
+      "method_id": "pm_decline",
+      "label": "Debit card ending 5547 (sandbox: declines)",
+      "kind": "card"
+    }
+  ],
+  "SUB-556201": [
+    {
+      "method_id": "pm_ok",
+      "label": "UPI wallet ending 0512",
+      "kind": "wallet"
+    },
+    {
+      "method_id": "pm_timeout",
+      "label": "Prepaid card ending 7788 (sandbox: provider timeout)",
+      "kind": "card"
+    },
+    {
+      "method_id": "pm_decline",
+      "label": "Debit card ending 4410 (sandbox: declines)",
+      "kind": "card"
+    }
+  ]
+}

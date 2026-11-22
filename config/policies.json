@@ -1,0 +1,292 @@
+{
+  "version": "2026.11.0",
+  "profile": "generic-sandbox",
+  "description": "Operator policy pack. NOT legal advice: every value is a configurable default that the operator's legal, privacy and risk teams must review per jurisdiction (see docs/BRD.md section 9).",
+  "currency": "USD",
+  "auth_levels": [
+    "unauthenticated",
+    "basic_pin",
+    "authenticated_mfa",
+    "in_person_verified"
+  ],
+  "defaults": {
+    "deny_unknown_actions": true
+  },
+  "actions": {
+    "account.read": {
+      "risk": "low",
+      "min_auth": "basic_pin",
+      "confirmation": false
+    },
+    "usage.read": {
+      "risk": "low",
+      "min_auth": "basic_pin",
+      "confirmation": false
+    },
+    "billing.read": {
+      "risk": "low",
+      "min_auth": "basic_pin",
+      "confirmation": false
+    },
+    "catalog.read": {
+      "risk": "none",
+      "min_auth": "unauthenticated",
+      "confirmation": false
+    },
+    "network.read": {
+      "risk": "low",
+      "min_auth": "basic_pin",
+      "confirmation": false
+    },
+    "order.read": {
+      "risk": "low",
+      "min_auth": "basic_pin",
+      "confirmation": false
+    },
+    "ticket.read": {
+      "risk": "low",
+      "min_auth": "basic_pin",
+      "confirmation": false
+    },
+    "ticket.create": {
+      "risk": "medium",
+      "min_auth": "basic_pin",
+      "confirmation": true,
+      "consent": "case_processing"
+    },
+    "billing.dispute": {
+      "risk": "medium",
+      "min_auth": "basic_pin",
+      "confirmation": true,
+      "consent": "case_processing"
+    },
+    "payment.initiate": {
+      "risk": "financial",
+      "min_auth": "basic_pin",
+      "confirmation": true,
+      "max_amount": 500.0,
+      "daily_limit": 1000.0,
+      "max_attempts_per_hour": 5
+    },
+    "payment.read": {
+      "risk": "low",
+      "min_auth": "basic_pin",
+      "confirmation": false
+    },
+    "payment.reconcile": {
+      "risk": "low",
+      "min_auth": "basic_pin",
+      "confirmation": false
+    },
+    "recharge.apply": {
+      "risk": "financial",
+      "min_auth": "basic_pin",
+      "confirmation": false,
+      "requires_verified_payment": true
+    },
+    "plan.change": {
+      "risk": "financial",
+      "min_auth": "basic_pin",
+      "confirmation": true
+    },
+    "addon.change": {
+      "risk": "financial",
+      "min_auth": "basic_pin",
+      "confirmation": true
+    },
+    "offer.apply": {
+      "risk": "financial",
+      "min_auth": "basic_pin",
+      "confirmation": true,
+      "max_value_without_approval": 50.0
+    },
+    "profile.update": {
+      "risk": "high",
+      "min_auth": "authenticated_mfa",
+      "confirmation": true
+    },
+    "preferences.update": {
+      "risk": "medium",
+      "min_auth": "basic_pin",
+      "confirmation": true
+    },
+    "sim.replace": {
+      "risk": "critical",
+      "min_auth": "authenticated_mfa",
+      "confirmation": true,
+      "step_up": true,
+      "human_approval": true
+    },
+    "esim.issue": {
+      "risk": "critical",
+      "min_auth": "authenticated_mfa",
+      "confirmation": true,
+      "step_up": true,
+      "human_approval": true
+    },
+    "port.initiate": {
+      "risk": "critical",
+      "min_auth": "authenticated_mfa",
+      "confirmation": true,
+      "step_up": true,
+      "human_approval": true
+    },
+    "billing.credit": {
+      "risk": "critical",
+      "min_auth": "authenticated_mfa",
+      "confirmation": false,
+      "human_approval": true,
+      "autonomous_limit": 0.0,
+      "hard_ceiling": 100.0
+    },
+    "network.change": {
+      "risk": "critical",
+      "min_auth": "authenticated_mfa",
+      "confirmation": true,
+      "forbidden": true,
+      "forbidden_reason": "Autonomous change of live network infrastructure is out of scope (plan section 12)."
+    },
+    "network.soft_reset": {
+      "risk": "medium",
+      "min_auth": "authenticated_mfa",
+      "confirmation": true,
+      "scope_note": "Subscriber-level signalling refresh only; not an infrastructure change."
+    },
+    "notification.send": {
+      "risk": "low",
+      "min_auth": "basic_pin",
+      "confirmation": false
+    },
+    "invoice.settle": {
+      "risk": "financial",
+      "min_auth": "basic_pin",
+      "confirmation": false,
+      "requires_verified_payment": true
+    }
+  },
+  "agent_permissions": {
+    "CustomerCareAgent": [
+      "account.read",
+      "usage.read",
+      "ticket.read",
+      "ticket.create",
+      "preferences.update",
+      "profile.update",
+      "network.read",
+      "notification.send"
+    ],
+    "BillingAgent": [
+      "billing.read",
+      "usage.read",
+      "billing.dispute",
+      "payment.initiate",
+      "payment.read",
+      "payment.reconcile",
+      "recharge.apply",
+      "account.read",
+      "catalog.read",
+      "ticket.create",
+      "notification.send",
+      "invoice.settle"
+    ],
+    "SalesAgent": [
+      "catalog.read",
+      "usage.read",
+      "account.read",
+      "plan.change",
+      "addon.change",
+      "offer.apply"
+    ],
+    "NetworkAgent": [
+      "network.read",
+      "network.soft_reset",
+      "ticket.create",
+      "account.read"
+    ],
+    "SimDeviceAgent": [
+      "account.read",
+      "catalog.read",
+      "sim.replace",
+      "esim.issue",
+      "port.initiate",
+      "notification.send"
+    ],
+    "OrderAgent": [
+      "order.read",
+      "ticket.read",
+      "account.read"
+    ],
+    "RetentionAgent": [
+      "catalog.read",
+      "offer.apply",
+      "account.read",
+      "usage.read"
+    ],
+    "KnowledgeAgent": [
+      "catalog.read"
+    ],
+    "SupervisorAgent": [
+      "account.read"
+    ]
+  },
+  "complaints": {
+    "categories": [
+      "billing",
+      "network",
+      "service",
+      "sales",
+      "other"
+    ],
+    "sla_hours": {
+      "P1": 4,
+      "P2": 24,
+      "P3": 72,
+      "P4": 120
+    },
+    "priority_rules": [
+      {
+        "when": "outage_confirmed_or_service_down_over_24h",
+        "priority": "P1"
+      },
+      {
+        "when": "billing_dispute_or_repeat_contact",
+        "priority": "P2"
+      },
+      {
+        "when": "default",
+        "priority": "P3"
+      }
+    ]
+  },
+  "retention": {
+    "data_days": {
+      "conversation": 30,
+      "audit": 730,
+      "kpi_events": 365
+    },
+    "pii_in_prompts": "masked"
+  },
+  "troubleshooting": {
+    "max_guided_steps": 3
+  },
+  "consent": {
+    "purposes": [
+      "case_processing",
+      "marketing",
+      "proactive_service_notices"
+    ],
+    "defaults": {
+      "case_processing": false,
+      "marketing": false,
+      "proactive_service_notices": true
+    }
+  },
+  "compliance_review_items": [
+    "Telecom customer-data (CPNI-style) access rules and customer verification standards per jurisdiction",
+    "Payment-card scope: the platform never sees card data; confirm the payment provider's hosted-field / tokenisation model",
+    "Consumer-protection rules on cancellation, retention offers and dispute handling timelines",
+    "Data-retention and deletion periods for conversations, audit and recordings; data residency of LLM/ASR providers",
+    "Regulatory complaint SLAs and mandatory complaint-number formats",
+    "Number-portability and SIM-replacement identity-verification rules"
+  ]
+}

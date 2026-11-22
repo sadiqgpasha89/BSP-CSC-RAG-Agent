@@ -1,0 +1,13 @@
+stateDiagram-v2
+  [*] --> PENDING : initiate (idempotency key)
+  PENDING --> SUCCESS : provider confirms
+  PENDING --> FAILED : provider declines
+  PENDING --> UNKNOWN : timeout, provider truth hidden
+  UNKNOWN --> SUCCESS : reconcile
+  UNKNOWN --> FAILED : reconcile
+  SUCCESS --> [*] : recharge applied or invoice settled
+  FAILED --> [*] : nothing applied
+  note right of UNKNOWN
+    Never reported as success.
+    Never retried blindly.
+  end note

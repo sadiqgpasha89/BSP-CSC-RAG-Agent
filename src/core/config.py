@@ -39,6 +39,12 @@ class Settings(BaseSettings):
     admin_api_key: Optional[str] = None  # Required (X-API-Key) for operator / state-changing endpoints outside development
     max_message_chars: int = 2000
 
+    # LLM phrasing layer (decisions never come from the model). "mock" = deterministic drafts unchanged.
+    llm_provider: str = "mock"  # mock | openai_compatible
+    llm_endpoint: str = "http://openstack-vllm.internal:8000/v1"
+    llm_model: str = "telco-care-8b"
+    llm_api_key: Optional[str] = None
+
     # Hybrid Cloud: OpenStack (On-Premises Private Cloud)
     openstack_enabled: bool = True
     openstack_auth_url: str = "http://openstack-keystone.internal:5000/v3"
@@ -64,8 +70,9 @@ class Settings(BaseSettings):
     churn_risk_threshold: float = 0.75         # delta_churn
     frustration_velocity_threshold: float = -0.5  # d(sentiment)/dt below this triggers proactive handoff
     max_agent_steps: int = 6                   # Deterministic loop cutoff (N <= 6)
-    max_refund_autonomous: float = 50.0        # Max automated credit without supervisor
-    max_refund_supervisor_required: float = 100.0  # > $100 requires HITL escalation
+    max_refund_autonomous: float = 0.0         # Plan §12: no unsupervised refunds. Credits are *proposed* for human approval.
+    max_refund_supervisor_required: float = 100.0  # Hard ceiling: > $100 is never executable without a human specialist
+    max_retention_offer_autonomous_usd: float = 50.0  # Catalogue-approved retention offers above this need supervisor approval
 
     # Drift Detection Thresholds
     drift_psi_threshold: float = 0.20          # PSI >= 0.2 triggers drift alert
@@ -74,6 +81,29 @@ class Settings(BaseSettings):
 
     # Security & Compliance
     cpni_enclave_enabled: bool = True
+    # Optional override of the assurance level granted to a session with no verified token (e.g. "basic_pin").
+    default_auth_level_override: Optional[str] = None
+
+    # Conversation, confirmation & step-up (all server-enforced; see docs/TSD.md)
+    sandbox_mode: bool = True                  # Enterprise adapters are labelled mock/sandbox implementations
+    policy_file: str = str(PROJECT_ROOT / "config" / "policies.json")
+    confirmation_ttl_sec: int = 300            # A pending consequential action expires after this long
+    stepup_otp_ttl_sec: int = 300
+    stepup_max_attempts: int = 3
+    stepup_elevation_ttl_sec: int = 900        # How long a successful step-up keeps MFA-level scopes in a conversation
+    conversation_ttl_sec: int = 3600
+    workflow_ttl_sec: int = 1800
+    max_delegation_depth: int = 2              # Orchestrator -> agent -> (at most) one more agent
+    max_turn_budget_sec: float = 20.0          # Wall-clock budget for one orchestrated turn
+    tool_timeout_sec: float = 5.0
+    tool_max_retries: int = 2                  # Bounded retries, read-only tools only
+    payment_duplicate_window_sec: int = 120
+
+    # Language & channels
+    default_language: str = "en"
+    supported_languages: str = "en,es,hi"
+    whatsapp_verify_token: Optional[str] = None
+    whatsapp_app_secret: Optional[str] = None
 
     @property
     def is_development(self) -> bool:
@@ -90,7 +120,13 @@ class Settings(BaseSettings):
         Development keeps the demo console usable (it has no login flow). Every other environment
         fails closed: callers must present a signed session token to obtain MFA-level privileges.
         """
+        if self.default_auth_level_override:
+            return self.default_auth_level_override
         return "authenticated_mfa" if self.is_development else "basic_pin"
+
+    @property
+    def languages(self) -> List[str]:
+        return [l.strip().lower() for l in self.supported_languages.split(",") if l.strip()]
 
     @model_validator(mode="after")
     def _enforce_production_secrets(self) -> "Settings":

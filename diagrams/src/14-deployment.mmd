@@ -1,0 +1,29 @@
+flowchart TD
+  subgraph CLIENT[Clients]
+    W[Web chat /customer]
+    M[Mobile app]
+    WA[WhatsApp provider]
+    V[Voice and contact centre]
+    OPC[Operator console /]
+  end
+  EDGE[API gateway and WAF - to be provided by the operator]
+  subgraph APP[Application container - Dockerfile in repo]
+    UV[uvicorn + FastAPI]
+    ST[(In-process state: conversations, pending actions, audit)]
+  end
+  subgraph EXT[External dependencies - not included]
+    IDP[Identity provider OIDC]
+    DB[(Durable store: Postgres or equivalent)]
+    RD[(Redis session cache)]
+    LLM[LLM endpoint - optional]
+    SYS[Operator BSS, OSS, billing, PSP, ticketing]
+    OBS[OpenTelemetry collector]
+  end
+  CLIENT --> EDGE --> UV
+  UV --- ST
+  UV -. replace sandbox adapters .-> SYS
+  UV -. optional .-> LLM
+  UV -. planned .-> IDP
+  ST -. planned persistence .-> DB
+  ST -. planned .-> RD
+  UV -. planned .-> OBS

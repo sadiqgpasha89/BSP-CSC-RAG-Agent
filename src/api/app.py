@@ -8,7 +8,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from src.api.routes import chat, hitl, metrics, mlops, network, rag
+from src.api.routes import admin, approvals, auth, channels, chat, hitl, metrics, mlops, network, rag
 from src.core.config import settings
 from src.core.logging import configure_logging, get_logger
 
@@ -49,6 +49,10 @@ app.include_router(hitl.router, prefix=API_V1_PREFIX)
 app.include_router(mlops.router, prefix=API_V1_PREFIX)
 app.include_router(rag.router, prefix=API_V1_PREFIX)
 app.include_router(metrics.router, prefix=API_V1_PREFIX)
+app.include_router(auth.router, prefix=API_V1_PREFIX)
+app.include_router(approvals.router, prefix=API_V1_PREFIX)
+app.include_router(channels.router, prefix=API_V1_PREFIX)
+app.include_router(admin.router, prefix=API_V1_PREFIX)
 
 
 @app.exception_handler(Exception)
@@ -62,6 +66,12 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
 async def serve_dashboard(request: Request):
     """Serve the interactive Telco Command Center web console."""
     return templates.TemplateResponse(request=request, name="index.html", context={"env": settings.environment})
+
+
+@app.get("/customer", response_class=HTMLResponse)
+async def serve_customer_chat(request: Request):
+    """Customer-facing chat page (sandbox sign-in, confirmations, step-up prompt, human-handover polling, CSAT)."""
+    return templates.TemplateResponse(request=request, name="customer.html", context={"env": settings.environment})
 
 
 @app.get(f"{API_V1_PREFIX}/health")

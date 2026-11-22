@@ -1,0 +1,26 @@
+sequenceDiagram
+  actor C as Customer
+  participant S as Supervisor
+  participant B as BillingAgent
+  participant G as ToolGateway
+  participant BSS as BSS adapter
+  participant K as Knowledge base
+  participant H as Human specialist
+  C->>S: Explain my bill
+  S->>B: handle
+  B->>G: billing.explain_charges
+  G->>BSS: invoice and line items
+  B->>G: usage.get_summary (CDR evidence)
+  B->>K: tariff and policy
+  B-->>C: Itemised explanation with invoice, CDR and KB references
+  C->>S: That roaming charge is wrong
+  S->>B: dispute
+  B->>G: billing.register_dispute
+  G->>G: consent for case processing
+  G-->>C: Confirmation required
+  C->>S: YES
+  G->>BSS: register dispute
+  BSS-->>G: dispute reference
+  G-->>C: Dispute reference and next step
+  Note over B,H: Credits are never autonomous. Any credit is routed for human approval.
+  G-->>H: Approval queue item

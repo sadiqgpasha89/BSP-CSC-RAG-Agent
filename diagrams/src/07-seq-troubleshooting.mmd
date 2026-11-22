@@ -1,0 +1,26 @@
+sequenceDiagram
+  actor C as Customer
+  participant S as Supervisor
+  participant N as NetworkAgent
+  participant G as ToolGateway
+  participant OSS as OSS adapter
+  participant T as Ticketing
+  participant X as Proactive notifier
+  C->>S: My internet is down
+  S->>N: handle
+  N->>G: network.check_outage
+  G->>OSS: alarms for subscriber sector
+  alt known outage
+    OSS-->>N: alarm, cause, ETA
+    N->>X: subscribe customer to updates (consent-aware)
+    N->>G: ticket.create (service_down, P2)
+    N-->>C: Verified outage details, ETA, SMS updates registered
+    Note over X: On restore, notice is sent only to consented subscribers
+  else no outage
+    N->>G: network.run_diagnostics
+    G->>OSS: line, signal, router checks
+    N-->>C: Guided steps
+    C->>S: Still not working
+    N->>G: ticket.create
+    N-->>C: Case reference, handover offered
+  end

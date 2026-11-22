@@ -1,0 +1,19 @@
+sequenceDiagram
+  actor C as Customer
+  participant S as Supervisor
+  participant W as WarmHandoffManager
+  participant H as Operator console
+  C->>S: I want to speak to a human
+  S->>W: create manifest (summary, intent, priority, suggested action, tool results)
+  W-->>C: Handing over. Reference ESC-xxxx. You will not need to repeat anything.
+  H->>W: claim(handover id)
+  W-->>H: Summary, history, suggested action
+  H->>W: reply(text)
+  loop poll every 3s
+    C->>S: GET /chat/{session}/messages
+    S-->>C: operator messages
+  end
+  C->>S: further message
+  S-->>C: Relayed to operator, no bot answer
+  H->>W: resolve
+  Note over S: Next customer message goes back to the bot

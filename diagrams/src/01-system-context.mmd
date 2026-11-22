@@ -1,0 +1,25 @@
+flowchart LR
+  C([Customer]) --> CH
+  OP([Human operator]) --> ADM
+  subgraph PLATFORM[Telecom agentic CX platform]
+    CH[Channels: web, mobile, WhatsApp, voice, contact centre]
+    GW[Conversational gateway]
+    ORCH[Supervisor and specialist agents]
+    TG[Tool gateway: policy, confirmation, step-up, audit]
+    KB[(Knowledge base and RAG)]
+    ADM[Operator console, approvals, KPIs]
+  end
+  CH --> GW --> ORCH --> TG
+  ORCH --> KB
+  ADM --> TG
+  TG -. sandbox adapters in this repo .-> SYS
+  subgraph SYS[Enterprise systems - mock today]
+    CRM[CRM]
+    BSS[BSS and billing]
+    OCS[OCS charging]
+    OSS[OSS and network]
+    PAY[Payment gateway]
+    TKT[Ticketing]
+    ORD[Order management]
+    NTF[Notifications]
+  end

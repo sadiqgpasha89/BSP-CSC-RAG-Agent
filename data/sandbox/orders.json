@@ -1,0 +1,124 @@
+{
+  "orders": [
+    {
+      "order_id": "ORD-30011",
+      "subscriber_id": "SUB-449182",
+      "type": "INSTALLATION",
+      "description": "Fibre 1Gbps installation",
+      "status": "COMPLETED",
+      "stages": [
+        [
+          "CREATED",
+          "2026-01-20"
+        ],
+        [
+          "CONFIRMED",
+          "2026-01-21"
+        ],
+        [
+          "INSTALLED",
+          "2026-02-01"
+        ],
+        [
+          "PROVISIONED",
+          "2026-02-01"
+        ]
+      ]
+    },
+    {
+      "order_id": "ORD-30542",
+      "subscriber_id": "SUB-773019",
+      "type": "DEVICE",
+      "description": "Samsung Galaxy S24 Ultra (device upgrade)",
+      "status": "SHIPPED",
+      "eta": "2026-11-25",
+      "carrier": "CourierCo",
+      "tracking_ref": "CC-77120044",
+      "stages": [
+        [
+          "CREATED",
+          "2026-11-18"
+        ],
+        [
+          "CONFIRMED",
+          "2026-11-18"
+        ],
+        [
+          "PACKED",
+          "2026-11-19"
+        ],
+        [
+          "SHIPPED",
+          "2026-11-21"
+        ]
+      ]
+    },
+    {
+      "order_id": "ORD-30577",
+      "subscriber_id": "SUB-556201",
+      "type": "NEW_CONNECTION",
+      "description": "New prepaid line + eSIM",
+      "status": "PROVISIONING",
+      "stages": [
+        [
+          "CREATED",
+          "2026-11-20"
+        ],
+        [
+          "CONFIRMED",
+          "2026-11-20"
+        ],
+        [
+          "PROVISIONING",
+          "2026-11-21"
+        ]
+      ],
+      "provisioning_status": "AWAITING_PORT_IN_CONFIRMATION"
+    },
+    {
+      "order_id": "ORD-30601",
+      "subscriber_id": "SUB-882194",
+      "type": "INSTALLATION",
+      "description": "Home fibre installation (second service)",
+      "status": "SCHEDULED",
+      "stages": [
+        [
+          "CREATED",
+          "2026-11-15"
+        ],
+        [
+          "CONFIRMED",
+          "2026-11-16"
+        ],
+        [
+          "SCHEDULED",
+          "2026-11-17"
+        ]
+      ],
+      "appointment_id": "APT-5501"
+    }
+  ],
+  "appointments": [
+    {
+      "appointment_id": "APT-5501",
+      "subscriber_id": "SUB-882194",
+      "order_id": "ORD-30601",
+      "kind": "INSTALLATION",
+      "date": "2026-11-26",
+      "window": "09:00-13:00",
+      "status": "CONFIRMED",
+      "technician_status": "ASSIGNED"
+    },
+    {
+      "appointment_id": "APT-5502",
+      "subscriber_id": "SUB-449182",
+      "order_id": null,
+      "kind": "FIELD_REPAIR",
+      "date": "2026-11-23",
+      "window": "14:00-18:00",
+      "status": "CONFIRMED",
+      "technician_status": "ASSIGNED",
+      "linked_case": "TCK-8812"
+    }
+  ]
+}

@@ -30,7 +30,21 @@
         "summary": "Disputed $30 roaming charge while travelling",
         "status": "resolved"
       }
-    ]
+    ],
+    "account_type": "postpaid",
+    "email": "alex.mercer@example.test",
+    "language": "en",
+    "services": [
+      {
+        "service_id": "SVC-882194-M1",
+        "type": "mobile",
+        "label": "Mobile line",
+        "plan_code": "5G_ULTRA_MAX_2026",
+        "status": "ACTIVE"
+      }
+    ],
+    "addons": [],
+    "sandbox_pin_hash": "ddd435f537188f97a4940fbc0cc46533106e6e5dc9aa1a4f42f9c73d934eebaa"
   },
   {
     "subscriber_id": "SUB-102948",
@@ -55,7 +69,21 @@
       "model": "Google Pixel 8 Pro",
       "esim_capable": true
     },
-    "recent_tickets": []
+    "recent_tickets": [],
+    "account_type": "postpaid",
+    "email": "elena.rostova@example.test",
+    "language": "es",
+    "services": [
+      {
+        "service_id": "SVC-102948-M1",
+        "type": "mobile",
+        "label": "Mobile line",
+        "plan_code": "FREEDOM_UNLIMITED_2018",
+        "status": "ACTIVE"
+      }
+    ],
+    "addons": [],
+    "sandbox_pin_hash": "a15895cb25c316dbcf4e71176ab09acf0f01a89bf4eceac398f06447801b356b"
   },
   {
     "subscriber_id": "SUB-449182",
@@ -88,7 +116,21 @@
         "status": "resolved"
       }
     ],
-    "olt_port": "OLT-OPTICAL-01/PON-04"
+    "olt_port": "OLT-OPTICAL-01/PON-04",
+    "account_type": "postpaid",
+    "email": "marcus.vance@example.test",
+    "language": "en",
+    "services": [
+      {
+        "service_id": "SVC-449182-B1",
+        "type": "broadband",
+        "label": "Home fibre",
+        "plan_code": "FIBER_GIGA_1G_2026",
+        "status": "ACTIVE"
+      }
+    ],
+    "addons": [],
+    "sandbox_pin_hash": "369afba0407545d50b66aa5d5b83adb1a9828d017dc1de1118eb128f53a4a80b"
   },
   {
     "subscriber_id": "SUB-773019",
@@ -113,6 +155,59 @@
       "model": "Samsung Galaxy S24 Ultra",
       "esim_capable": true
     },
-    "recent_tickets": []
+    "recent_tickets": [],
+    "account_type": "postpaid",
+    "email": "david.chen@example.test",
+    "language": "en",
+    "services": [
+      {
+        "service_id": "SVC-773019-M1",
+        "type": "mobile",
+        "label": "Mobile line",
+        "plan_code": "5G_ULTRA_MAX_2026",
+        "status": "ACTIVE"
+      }
+    ],
+    "addons": [],
+    "sandbox_pin_hash": "e77f58681686dd18572eb388607c93b0bff5899063d6b44a9dee106cd551772c"
+  },
+  {
+    "subscriber_id": "SUB-556201",
+    "msisdn": "+1-415-555-0512",
+    "name": "Priya Nair",
+    "tier": "standard_consumer",
+    "plan_code": "PREPAID_SMART_2026",
+    "contract_start_date": "2026-04-02",
+    "monthly_rate_usd": 0.0,
+    "assigned_sector": "Sector-2",
+    "current_tower_id": "TOWER-102",
+    "tenure_months": 7,
+    "clv_usd": 520.0,
+    "churn_risk": 0.3,
+    "billing_status": "prepaid",
+    "unbilled_usage_usd": 0.0,
+    "last_bill_amount_usd": 0.0,
+    "recent_disputes_count": 0,
+    "active_equipment": {
+      "imei": "356938035643809",
+      "iccid": "8901410321776655443",
+      "model": "Samsung Galaxy A55",
+      "esim_capable": true
+    },
+    "recent_tickets": [],
+    "account_type": "prepaid",
+    "email": "priya.nair@example.test",
+    "language": "hi",
+    "services": [
+      {
+        "service_id": "SVC-556201-M1",
+        "type": "mobile",
+        "label": "Prepaid line",
+        "plan_code": "PREPAID_SMART_2026",
+        "status": "ACTIVE"
+      }
+    ],
+    "addons": [],
+    "sandbox_pin_hash": "a0225b81d8ff8ad673886254d0d5d0487e7c5421d122363d260f5e10ba6c67f8"
   }
 ]

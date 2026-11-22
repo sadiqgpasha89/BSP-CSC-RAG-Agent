@@ -1,0 +1,277 @@
+{
+  "currency": "USD",
+  "plans": [
+    {
+      "plan_code": "5G_ULTRA_MAX_2026",
+      "name": "5G Ultra Max",
+      "service_type": "mobile",
+      "billing": "postpaid",
+      "monthly_fee_usd": 75.0,
+      "sellable": true,
+      "allowances": {
+        "data_gb": 100,
+        "voice_min": null,
+        "sms": null,
+        "hotspot_gb": 50
+      },
+      "highlights": [
+        "Unlimited 5G/4G (priority data to 100GB)",
+        "50GB hotspot",
+        "Roaming: Canada, Mexico, UK (15GB)"
+      ],
+      "kb_doc_id": "KB-TAR-2026-001"
+    },
+    {
+      "plan_code": "5G_PLUS_50_2026",
+      "name": "5G Plus 50",
+      "service_type": "mobile",
+      "billing": "postpaid",
+      "monthly_fee_usd": 50.0,
+      "sellable": true,
+      "allowances": {
+        "data_gb": 50,
+        "voice_min": null,
+        "sms": null,
+        "hotspot_gb": 10
+      },
+      "highlights": [
+        "50GB 5G data",
+        "10GB hotspot",
+        "Unlimited voice and SMS"
+      ]
+    },
+    {
+      "plan_code": "ESSENTIAL_15_2026",
+      "name": "Essential 15",
+      "service_type": "mobile",
+      "billing": "postpaid",
+      "monthly_fee_usd": 25.0,
+      "sellable": true,
+      "allowances": {
+        "data_gb": 15,
+        "voice_min": 1000,
+        "sms": 1000,
+        "hotspot_gb": 0
+      },
+      "highlights": [
+        "15GB data",
+        "1000 minutes",
+        "No hotspot"
+      ]
+    },
+    {
+      "plan_code": "FREEDOM_UNLIMITED_2018",
+      "name": "Freedom Unlimited (2018, grandfathered)",
+      "service_type": "mobile",
+      "billing": "postpaid",
+      "monthly_fee_usd": 50.0,
+      "sellable": false,
+      "legacy": true,
+      "allowances": {
+        "data_gb": null,
+        "voice_min": null,
+        "sms": null,
+        "hotspot_gb": 10
+      },
+      "highlights": [
+        "Grandfathered: 10GB hotspot"
+      ],
+      "kb_doc_id": "KB-TAR-2018-001"
+    },
+    {
+      "plan_code": "FIBER_GIGA_1G_2026",
+      "name": "Fibre Pro GigaWave 1Gbps",
+      "service_type": "broadband",
+      "billing": "postpaid",
+      "monthly_fee_usd": 65.0,
+      "sellable": true,
+      "allowances": {
+        "speed_mbps": 1000,
+        "data_gb": null
+      },
+      "highlights": [
+        "1Gbps symmetrical",
+        "Wi-Fi 6E gateway",
+        "99.98% uptime SLA"
+      ],
+      "kb_doc_id": "KB-TAR-2026-002"
+    },
+    {
+      "plan_code": "FIBER_500_2026",
+      "name": "Fibre 500",
+      "service_type": "broadband",
+      "billing": "postpaid",
+      "monthly_fee_usd": 50.0,
+      "sellable": true,
+      "allowances": {
+        "speed_mbps": 500,
+        "data_gb": null
+      },
+      "highlights": [
+        "500Mbps symmetrical",
+        "Wi-Fi 6 gateway"
+      ]
+    },
+    {
+      "plan_code": "PREPAID_SMART_2026",
+      "name": "Prepaid Smart",
+      "service_type": "mobile",
+      "billing": "prepaid",
+      "monthly_fee_usd": 0.0,
+      "sellable": true,
+      "allowances": {
+        "data_gb": null,
+        "voice_min": null,
+        "sms": null
+      },
+      "highlights": [
+        "Pay as you go with recharge packs"
+      ]
+    }
+  ],
+  "addons": [
+    {
+      "addon_code": "ROAM_PASSPORT_2026",
+      "name": "Global Wanderlust Roaming Passport",
+      "price_usd": 10.0,
+      "period": "per_day",
+      "service_types": [
+        "mobile"
+      ],
+      "billing": [
+        "postpaid",
+        "prepaid"
+      ],
+      "excluded_plans": [],
+      "kb_doc_id": "KB-TAR-2026-003"
+    },
+    {
+      "addon_code": "DATA_BOOST_10GB",
+      "name": "Data Boost 10GB",
+      "price_usd": 10.0,
+      "period": "30_days",
+      "service_types": [
+        "mobile"
+      ],
+      "billing": [
+        "postpaid",
+        "prepaid"
+      ],
+      "excluded_plans": [
+        "5G_ULTRA_MAX_2026"
+      ],
+      "reason_excluded": "Your plan already includes priority data up to 100GB."
+    },
+    {
+      "addon_code": "INTL_CALLING_PACK",
+      "name": "International Calling Pack",
+      "price_usd": 5.0,
+      "period": "monthly",
+      "service_types": [
+        "mobile"
+      ],
+      "billing": [
+        "postpaid"
+      ],
+      "excluded_plans": [
+        "5G_ULTRA_MAX_2026"
+      ],
+      "reason_excluded": "Your plan already includes free calls to 50+ destinations."
+    },
+    {
+      "addon_code": "STREAMING_PASS",
+      "name": "Streaming Pass",
+      "price_usd": 8.0,
+      "period": "monthly",
+      "service_types": [
+        "mobile",
+        "broadband"
+      ],
+      "billing": [
+        "postpaid"
+      ],
+      "excluded_plans": [
+        "5G_ULTRA_MAX_2026"
+      ],
+      "reason_excluded": "Your plan already includes a 4K streaming pass."
+    },
+    {
+      "addon_code": "WIFI_EXTENDER",
+      "name": "Mesh Wi-Fi Extender",
+      "price_usd": 6.0,
+      "period": "monthly",
+      "service_types": [
+        "broadband"
+      ],
+      "billing": [
+        "postpaid"
+      ],
+      "excluded_plans": []
+    }
+  ],
+  "recharge_packs": [
+    {
+      "pack_id": "PK_5",
+      "amount_usd": 5.0,
+      "data_gb": 2,
+      "validity_days": 7,
+      "label": "Mini 2GB / 7 days"
+    },
+    {
+      "pack_id": "PK_10",
+      "amount_usd": 10.0,
+      "data_gb": 6,
+      "validity_days": 14,
+      "label": "Standard 6GB / 14 days"
+    },
+    {
+      "pack_id": "PK_20",
+      "amount_usd": 20.0,
+      "data_gb": 15,
+      "validity_days": 30,
+      "label": "Plus 15GB / 30 days"
+    },
+    {
+      "pack_id": "PK_30",
+      "amount_usd": 30.0,
+      "data_gb": 30,
+      "validity_days": 30,
+      "label": "Max 30GB / 30 days"
+    }
+  ],
+  "retention_offers": [
+    {
+      "offer_id": "RET_LOYALTY_10",
+      "title": "Preferred Customer Appreciation Perk",
+      "description": "$10/month bill credit for 3 months",
+      "value_usd": 30.0,
+      "min_clv_usd": 0,
+      "max_clv_usd": 1999.99,
+      "billing": [
+        "postpaid"
+      ]
+    },
+    {
+      "offer_id": "RET_VIP_20",
+      "title": "VIP Loyalty Continuity Credit",
+      "description": "$20/month bill credit for 6 months",
+      "value_usd": 120.0,
+      "min_clv_usd": 2000,
+      "max_clv_usd": null,
+      "billing": [
+        "postpaid"
+      ]
+    },
+    {
+      "offer_id": "RET_PREPAID_BONUS",
+      "title": "Prepaid Loyalty Bonus",
+      "description": "Bonus 5GB data with your next recharge",
+      "value_usd": 5.0,
+      "min_clv_usd": 0,
+      "max_clv_usd": null,
+      "billing": [
+        "prepaid"
+      ]
+    }
+  ]
+}

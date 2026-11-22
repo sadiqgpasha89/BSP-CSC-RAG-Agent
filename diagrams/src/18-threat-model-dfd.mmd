@@ -1,0 +1,27 @@
+flowchart LR
+  subgraph TB1[Trust boundary: internet]
+    CU[Customer or attacker]
+    WH[Channel webhook senders]
+  end
+  subgraph TB2[Trust boundary: application]
+    GWY[Chat API and channel adapters]
+    SUP[Supervisor and agents - untrusted decisions]
+    TG[Tool gateway - trusted enforcement]
+    POL[Policy pack and audit]
+    KB[(Knowledge base - untrusted content)]
+  end
+  subgraph TB3[Trust boundary: operator]
+    OPR[Operator console]
+  end
+  subgraph TB4[Trust boundary: enterprise systems]
+    SYS[(Systems of record)]
+  end
+  CU -- T1 session takeover, T2 injection --> GWY
+  WH -- T3 forged webhook --> GWY
+  GWY --> SUP
+  SUP -- T4 over-privileged tool call --> TG
+  SUP -- T5 poisoned document --> KB
+  TG -- checks T6 cross-customer args, T7 replay --> POL
+  TG --> SYS
+  OPR -- T8 policy relaxation, T9 self-approval --> TG
+  TG -- T10 log tampering --> POL

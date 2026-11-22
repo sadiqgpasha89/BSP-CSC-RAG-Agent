@@ -1,0 +1,29 @@
+flowchart TD
+  U[Customer message] --> LD[Language detection]
+  LD --> CF{Control reply? YES, NO, OTP, consent}
+  CF -- yes --> CTRL[Deterministic control flow - no LLM]
+  CF -- no --> IC[Intent classifier and entity extraction]
+  IC --> HR{Human requested or high risk?}
+  HR -- yes --> HO[Warm handover]
+  HR -- no --> RT[Route]
+  RT --> CC[CustomerCareAgent]
+  RT --> BL[BillingAgent]
+  RT --> SL[SalesAgent]
+  RT --> NW[NetworkAgent]
+  RT --> SD[SimDeviceAgent]
+  RT --> OR[OrderAgent]
+  RT --> RN[RetentionAgent]
+  RT --> KN[KnowledgeAgent]
+  CC --> TG[ToolGateway]
+  BL --> TG
+  SL --> TG
+  NW --> TG
+  SD --> TG
+  OR --> TG
+  RN --> TG
+  KN --> RAG[(Knowledge base)]
+  TG --> SY[Synthesis: messages from tool results]
+  RAG --> SY
+  SY --> GR{Guardrails pass?}
+  GR -- yes --> OUT[Reply with sources and references]
+  GR -- no --> HO

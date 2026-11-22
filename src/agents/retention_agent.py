@@ -1,85 +1,36 @@
-"""Retention & Churn Mitigation Worker Agent."""
+"""RetentionAgent: save-offer formulation from the approved catalogue only.
 
-import time
-from typing import Dict, Any
+The agent cannot invent concessions. It lists catalogue offers this customer qualifies for; applying one goes through
+the gateway (customer confirmation, plus human approval above the autonomous value limit).
+"""
+
+from src.agents.base import AgentOutcome, BaseAgent
 from src.agents.state import AgenticSessionState
 from src.core.config import settings
-from src.core.logging import get_logger
-
-logger = get_logger(__name__)
 
 
-class RetentionAgent:
-    """Specializes in subscriber retention, CLV preservation, and policy-bounded offers."""
+class RetentionAgent(BaseAgent):
+    NAME = "RetentionAgent"
 
-    NAME = "RetentionWorkerAgent"
-
-    def execute(self, state: AgenticSessionState, task_instruction: str) -> Dict[str, Any]:
-        """Formulate bounded retention concession to avert subscriber cancellation."""
-        start_time = time.perf_counter()
-        sub_id = state.subscriber_id
-        clv_usd = float(state.blackboard.get("clv_usd", 1500.00))
-        churn_risk = state.churn_risk_score
-
-        # Bound retention concession based on CLV and churn probability
-        if clv_usd >= 2000.0:
-            offer_title = "VIP Loyalty Continuity Credit"
-            concession_desc = "$20/month bill credit for the next 6 months plus complimentary 50GB high-speed hotspot boost."
-            financial_value_usd = 120.00
-            retained_prob_lift = 0.65
-        else:
-            offer_title = "Preferred Customer Appreciation Perk"
-            concession_desc = "$10/month bill credit for 3 months plus free international roaming passport."
-            financial_value_usd = 30.00
-            retained_prob_lift = 0.45
-
-        # Retention concessions are financial commitments and obey the same fiscal ceiling as billing credits:
-        # anything above the autonomous limit is *proposed*, not granted, until a supervisor approves it.
-        requires_approval = financial_value_usd > settings.max_refund_autonomous
-        if requires_approval:
-            state.escalate(
-                f"Retention concession worth ${financial_value_usd:.2f} exceeds autonomous limit "
-                f"(${settings.max_refund_autonomous:.2f}); supervisor approval required"
-            )
-
-        expected_clv_saved = round(clv_usd * retained_prob_lift, 2)
-        duration_ms = (time.perf_counter() - start_time) * 1000.0
-
-        tool_output = {
-            "success": True,
-            "subscriber_id": sub_id,
-            "requires_supervisor_approval": requires_approval,
-            "churn_risk_observed": churn_risk,
-            "clv_usd": clv_usd,
-            "offer_title": offer_title,
-            "concession_details": concession_desc,
-            "financial_commitment_usd": financial_value_usd,
-            "expected_clv_preserved_usd": expected_clv_saved,
-        }
-
-        thought = (
-            f"Subscriber {sub_id} flagged with elevated churn risk ({churn_risk:.2f}). "
-            f"Account CLV is ${clv_usd:.2f}. "
-            f"Prepared bounded retention package '{offer_title}' to protect account equity."
-        )
-
-        state.record_step(
-            agent_name=self.NAME,
-            action="FORMULATE_RETENTION_CONCESSION",
-            tool_name="retention_policy_engine",
-            tool_input={"subscriber_id": sub_id, "clv_usd": clv_usd, "churn_risk": churn_risk},
-            tool_output=tool_output,
-            thought=thought,
-            latency_ms=duration_ms,
-        )
-
-        state.blackboard["retention_package"] = tool_output
-        return {
-            "status": "success",
-            "agent": self.NAME,
-            "retention_package": tool_output,
-            "thought": thought,
-        }
+    def run(self, state: AgenticSessionState, instruction: str) -> AgentOutcome:
+        out = self.outcome()
+        res = self.call(state, "catalog.list_offers")
+        if not self.interpret(res, out):
+            return self.finish(state, out)
+        offers = res.data["offers"]
+        if not offers:
+            out.notices.append("I'm sorry to hear you're thinking of leaving. I don't have an automatic offer for your account, so I'm connecting you with a specialist who can discuss options.")
+            state.escalate("Retention: customer at risk and no catalogue offer is available")
+            return self.finish(state, out)
+        best = max(offers, key=lambda o: o["value_usd"])
+        out.notices.append("I'm sorry to hear that, and I'd like to keep you.")
+        out.messages.append(f"You qualify for the {best['title']}: {best['description']}.")
+        state.blackboard["retention_offer_id"] = best["offer_id"]
+        res = self.call(state, "offer.apply", {"offer_id": best["offer_id"]})
+        self.interpret(res, out)
+        if res.status.value in ("CONFIRMATION_REQUIRED", "APPROVAL_REQUIRED"):
+            out.notices.append("If you'd like it, confirm and I'll submit it" + (" for a supervisor to approve." if best["value_usd"] > settings.max_retention_offer_autonomous_usd else "."))
+        return self.finish(state, out)
 
 
 retention_agent = RetentionAgent()
