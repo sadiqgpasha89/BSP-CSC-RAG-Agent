@@ -26,12 +26,18 @@ class CPNIScope:
     MODIFY_SERVICES = "cpni:modify:services"
     HIGH_RISK_CREDENTIAL = "cpni:modify:credential_sim"
     FINANCIAL_CREDIT = "cpni:modify:billing_credit"
+    # Transaction / case scopes (defence in depth beneath the policy engine, which owns assurance-level rules).
+    TXN_PAYMENT = "txn:payment"
+    TXN_PLAN = "txn:plan_change"
+    CASE_CREATE = "case:create"
+    VIEW_ORDERS = "view:orders"
+    MODIFY_PROFILE = "cpni:modify:profile"
 
 
 # Least-privilege scope matrix keyed by authentication assurance level.
 SCOPES_BY_AUTH_LEVEL: Dict[str, List[str]] = {
     "unauthenticated": [],
-    "basic_pin": [CPNIScope.VIEW_ACCOUNT, CPNIScope.VIEW_BILLING],
+    "basic_pin": [CPNIScope.VIEW_ACCOUNT, CPNIScope.VIEW_BILLING, CPNIScope.TXN_PAYMENT, CPNIScope.TXN_PLAN, CPNIScope.CASE_CREATE, CPNIScope.VIEW_ORDERS],
     "authenticated_mfa": [
         CPNIScope.VIEW_ACCOUNT,
         CPNIScope.VIEW_BILLING,
@@ -39,6 +45,11 @@ SCOPES_BY_AUTH_LEVEL: Dict[str, List[str]] = {
         CPNIScope.MODIFY_SERVICES,
         CPNIScope.FINANCIAL_CREDIT,
         CPNIScope.HIGH_RISK_CREDENTIAL,
+        CPNIScope.TXN_PAYMENT,
+        CPNIScope.TXN_PLAN,
+        CPNIScope.CASE_CREATE,
+        CPNIScope.VIEW_ORDERS,
+        CPNIScope.MODIFY_PROFILE,
     ],
 }
 SCOPES_BY_AUTH_LEVEL["in_person_verified"] = list(SCOPES_BY_AUTH_LEVEL["authenticated_mfa"])

@@ -171,6 +171,30 @@ class IngestionPipeline:
                     )
                 )
 
+        # Format 4: FAQ / policy articles (owned, versioned, dated)
+        elif "question" in doc and "answer" in doc:
+            content = (
+                f"FAQ: {title}\n"
+                f"Question: {doc['question']}\n"
+                f"Answer: {doc['answer']}\n"
+                f"Owner: {doc.get('owner', 'n/a')} | Version: {doc.get('version', 'n/a')} | Language: {doc.get('language', 'en')}"
+            )
+            chunks.append(
+                KnowledgeChunk(
+                    chunk_id=f"{doc_id}-FAQ-01",
+                    doc_id=doc_id,
+                    title=title,
+                    category=category,
+                    content=content,
+                    raw_metadata=doc,
+                    plan_code=None,
+                    valid_from=valid_from,
+                    valid_to=valid_to,
+                    is_legacy=False,
+                    keywords=keywords + [doc["question"]],
+                )
+            )
+
         # Fallback / General JSON representation
         else:
             chunks.append(

@@ -33,3 +33,32 @@ def resolve_escalation(req: ResolveEscalationRequest):
     if not res:
         raise HTTPException(status_code=404, detail="Escalation ID not found")
     return {"status": "resolved", "escalation_id": req.escalation_id, "resolved_at": res.resolved_at}
+
+
+class ClaimRequest(BaseModel):
+    escalation_id: str = Field(min_length=1, max_length=64)
+    operator: str = Field(min_length=1, max_length=64)
+
+
+class ReplyRequest(ClaimRequest):
+    text: str = Field(min_length=1, max_length=1500)
+
+
+@router.post("/claim")
+def claim_escalation(req: ClaimRequest):
+    """A human agent takes over the conversation; the customer then talks to them, not the assistant."""
+    try:
+        m = warm_handoff_manager.claim(req.escalation_id, req.operator)
+    except EscalationAlreadyResolvedError:
+        raise HTTPException(status_code=409, detail="Escalation already claimed or resolved")
+    if not m:
+        raise HTTPException(status_code=404, detail="Escalation ID not found")
+    return {"status": "claimed", "summary": m.summary, "suggested_next_action": m.suggested_next_action, "awaiting_approval": m.awaiting_approval, "messages": m.messages}
+
+
+@router.post("/reply")
+def reply_to_customer(req: ReplyRequest):
+    msg = warm_handoff_manager.reply(req.escalation_id, req.operator, req.text)
+    if not msg:
+        raise HTTPException(status_code=409, detail="Claim the escalation first")
+    return {"status": "sent", "ts": msg["ts"]}

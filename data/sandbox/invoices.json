@@ -1,0 +1,167 @@
+{
+  "SUB-882194": [
+    {
+      "invoice_id": "INV-2026-09-882194",
+      "period": "2026-08-15/2026-09-14",
+      "issued": "2026-09-15",
+      "due": "2026-09-29",
+      "status": "DISPUTED_UNPAID",
+      "currency": "USD",
+      "lines": [
+        {
+          "line_id": "L1",
+          "type": "RECURRING",
+          "description": "5G Ultra Max monthly fee",
+          "amount_usd": 75.0,
+          "evidence": {
+            "source": "tariff",
+            "ref": "KB-TAR-2026-001"
+          }
+        },
+        {
+          "line_id": "L2",
+          "type": "ROAMING",
+          "description": "International roaming data, Frankfurt DE (512MB) 2026-09-10",
+          "amount_usd": 30.0,
+          "disputable": true,
+          "evidence": {
+            "source": "cdr",
+            "ref": "CDR-20260910-1422",
+            "note": "512MB outside the included Canada/Mexico/UK zone"
+          }
+        },
+        {
+          "line_id": "L3",
+          "type": "USAGE",
+          "description": "International voice, London UK (15 min) 2026-09-05",
+          "amount_usd": 8.5,
+          "evidence": {
+            "source": "cdr",
+            "ref": "CDR-20260905-1830",
+            "note": "Included zone, but premium-number rate applied"
+          }
+        },
+        {
+          "line_id": "L4",
+          "type": "TAX",
+          "description": "Taxes and regulatory fees",
+          "amount_usd": 11.0,
+          "evidence": {
+            "source": "tax_table",
+            "ref": "TAX-2026-Q3"
+          }
+        }
+      ],
+      "total_usd": 124.5
+    }
+  ],
+  "SUB-102948": [
+    {
+      "invoice_id": "INV-2026-09-102948",
+      "period": "2026-08-10/2026-09-09",
+      "issued": "2026-09-10",
+      "due": "2026-09-24",
+      "status": "PAID",
+      "currency": "USD",
+      "lines": [
+        {
+          "line_id": "L1",
+          "type": "RECURRING",
+          "description": "Freedom Unlimited (2018) monthly fee",
+          "amount_usd": 45.0,
+          "evidence": {
+            "source": "tariff",
+            "ref": "KB-TAR-2018-001"
+          }
+        },
+        {
+          "line_id": "L2",
+          "type": "TAX",
+          "description": "Taxes and regulatory fees",
+          "amount_usd": 5.0,
+          "evidence": {
+            "source": "tax_table",
+            "ref": "TAX-2026-Q3"
+          }
+        }
+      ],
+      "total_usd": 50.0
+    }
+  ],
+  "SUB-449182": [
+    {
+      "invoice_id": "INV-2026-09-449182",
+      "period": "2026-08-01/2026-08-31",
+      "issued": "2026-09-01",
+      "due": "2026-09-15",
+      "status": "PAID",
+      "currency": "USD",
+      "lines": [
+        {
+          "line_id": "L1",
+          "type": "RECURRING",
+          "description": "Fibre Pro GigaWave 1Gbps monthly fee",
+          "amount_usd": 59.0,
+          "evidence": {
+            "source": "tariff",
+            "ref": "KB-TAR-2026-002"
+          }
+        },
+        {
+          "line_id": "L2",
+          "type": "TAX",
+          "description": "Taxes and regulatory fees",
+          "amount_usd": 6.0,
+          "evidence": {
+            "source": "tax_table",
+            "ref": "TAX-2026-Q3"
+          }
+        }
+      ],
+      "total_usd": 65.0
+    }
+  ],
+  "SUB-773019": [
+    {
+      "invoice_id": "INV-2026-09-773019",
+      "period": "2026-08-20/2026-09-19",
+      "issued": "2026-09-20",
+      "due": "2026-10-04",
+      "status": "UNPAID",
+      "currency": "USD",
+      "lines": [
+        {
+          "line_id": "L1",
+          "type": "RECURRING",
+          "description": "5G Ultra Max monthly fee",
+          "amount_usd": 75.0,
+          "evidence": {
+            "source": "tariff",
+            "ref": "KB-TAR-2026-001"
+          }
+        },
+        {
+          "line_id": "L2",
+          "type": "USAGE",
+          "description": "Roaming day pass (Wanderlust) 1 day",
+          "amount_usd": 10.0,
+          "evidence": {
+            "source": "cdr",
+            "ref": "CDR-20260912-0900"
+          }
+        },
+        {
+          "line_id": "L3",
+          "type": "DISCOUNT",
+          "description": "Loyalty discount",
+          "amount_usd": -5.0,
+          "evidence": {
+            "source": "offer",
+            "ref": "OFFER-LOYAL-5"
+          }
+        }
+      ],
+      "total_usd": 80.0
+    }
+  ]
+}

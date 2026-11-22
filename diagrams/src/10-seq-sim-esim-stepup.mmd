@@ -1,0 +1,23 @@
+sequenceDiagram
+  actor C as Customer
+  participant S as Supervisor
+  participant D as SimDeviceAgent
+  participant G as ToolGateway
+  participant N as Notification (SMS)
+  participant OP as Human operator
+  C->>S: I need a SIM replacement, ICCID ...
+  S->>D: handle
+  D->>G: sim.replace
+  G->>G: session is basic_pin, action needs MFA
+  G-->>C: STEP_UP_REQUIRED
+  G->>N: send OTP to registered number
+  C->>S: 6-digit code
+  S->>S: verify code, lift session, resume saved request
+  G-->>C: Confirm SIM replacement?
+  C->>S: YES
+  G->>G: status AWAITING_APPROVAL
+  G-->>OP: Approval queue
+  G-->>C: Needs approval from a specialist
+  OP->>G: approve (operator-only endpoint)
+  G->>G: execute and audit
+  Note over G: 3 wrong codes lock step-up and escalate to a human

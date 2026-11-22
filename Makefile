@@ -1,4 +1,4 @@
-.PHONY: install test test-unit test-integration test-edge test-perf run clean
+.PHONY: install test test-unit test-integration test-security test-edge test-perf run clean diagrams
 
 PYTHON = .venv/bin/python
 PYTEST = $(PYTHON) -m pytest
@@ -17,6 +17,9 @@ test-unit:
 test-integration:
 	$(PYTEST) tests/integration/ -v
 
+test-security:
+	$(PYTEST) tests/security/ -v
+
 test-edge:
 	$(PYTEST) tests/edge_case/ -v
 
@@ -30,3 +33,6 @@ clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 	find . -type f -name "*.pyc" -delete
 	rm -rf .pytest_cache .coverage htmlcov
+
+diagrams:
+	bash diagrams/render.sh

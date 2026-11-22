@@ -1,175 +1,166 @@
-"""Billing & Disputes Worker Agent."""
+"""BillingAgent: explains invoices, registers disputes, takes bill payments and prepaid recharges.
+
+It NEVER credits money. A dispute is registered with evidence and routed to a human specialist; credits are a
+human-approved action outside the agent's permissions (policy pack: ``billing.credit`` autonomous limit = 0).
+"""
 
 import re
-import time
 from typing import Any, Dict, Optional
 
+from src.agents.base import AgentOutcome, BaseAgent
+from src.agents.entities import extract
 from src.agents.state import AgenticSessionState
-from src.core.config import settings
-from src.core.logging import get_logger
-from src.core.security import CPNIScope, security_service
-from src.tools.bss_adapter import BillingCreditResult, bss_adapter
 
-logger = get_logger(__name__)
-
-# Phrases that mean the *customer is asking for money back*. The previous agent keyed off words in its own
-# instruction string ("...authorize credit for..."), which always matched, so every billing question triggered a credit.
-REFUND_REQUEST_PATTERN = re.compile(
-    r"\b(?:refund|credit|reimburse|reverse|dispute|disputed|charged twice|double[- ]charged|overcharged|"
-    r"wrongly charged|unauthori[sz]ed charge|unexpected charge|demand)\b",
-    re.IGNORECASE,
-)
+DISPUTE_RE = re.compile(r"\b(dispute|wrong|incorrect|overcharg\w*|charged twice|double[- ]charged|unexpected|unauthori[sz]ed|refund|credit|reverse|shouldn'?t|not mine|didn'?t use|never used)\b", re.I)
+PAY_RE = re.compile(r"\bpagar (?:mi |la )?factura\b|बिल (?:भरना|भरें)|\b(pay|payment|settle|clear)\b.*\b(bill|invoice|due|outstanding|balance)\b|\bpay (?:my|the) (?:bill|invoice)\b|\bpay now\b", re.I)
+RECHARGE_RE = re.compile(r"\b(recharge|top[- ]?up|topup|add (?:data|credit|balance)|buy (?:a )?(?:pack|data)|recargar?|रिचार्ज)\b|रिचार्ज", re.I)
+STATUS_RE = re.compile(r"\b(payment status|did (?:my )?payment|payment (?:go|went) through|pending payment|failed payment)\b", re.I)
+MOST_RE = re.compile(r"\b(?:the )?(?:roaming|international|frankfurt|london|premium)\b", re.I)
 
 
-class BillingAgent:
-    """Specializes in invoice reconciliation, itemized CDR review, and micro-refund authorizations."""
-
+class BillingAgent(BaseAgent):
     NAME = "BillingAgent"
 
-    def execute(self, state: AgenticSessionState, task_instruction: str) -> Dict[str, Any]:
-        """Execute billing investigation and issue a policy-bounded credit only when warranted and verified."""
-        start_time = time.perf_counter()
-        sub_id = state.subscriber_id
+    def run(self, state: AgenticSessionState, instruction: str) -> AgentOutcome:
+        text = state.sanitized_utterance or ""
+        ent = extract(state.raw_utterance or text)
+        out = self.outcome()
+        if ent.get("payment_id") or STATUS_RE.search(text):
+            return self.finish(state, self._payment_status(state, ent, out))
+        if RECHARGE_RE.search(text):
+            return self.finish(state, self._recharge(state, ent, out))
+        if PAY_RE.search(text):
+            return self.finish(state, self._pay_bill(state, ent, out))
+        if DISPUTE_RE.search(text):
+            return self.finish(state, self._dispute(state, ent, text, out))
+        return self.finish(state, self._explain(state, ent, out))
 
-        # 0. CPNI gate: reading billing data requires the billing-view scope
-        can_view, deny_reason = security_service.validate_cpni_access(state.auth_context, CPNIScope.VIEW_BILLING)
-        if not can_view:
-            return self._record(
-                state, start_time,
-                tool_output={"success": True, "access_denied": deny_reason, "refund_result": None},
-                thought=f"Billing access denied by CPNI policy: {deny_reason}",
-                summary_note="I need to verify your identity before I can discuss billing details.",
-            )
+    # ------------------------------------------------------------------ explain
+    def _explain(self, state, ent, out: AgentOutcome, *, quiet: bool = False) -> AgentOutcome:
+        res = self.call(state, "billing.explain_charges", {"invoice_id": ent.get("invoice_id", "latest")})
+        if not self.interpret(res, out):
+            return out
+        d = res.data
+        state.blackboard["invoice"] = {"invoice_id": d["invoice_id"], "disputable": d["disputable_line_ids"], "status": d["status"], "total_usd": d["total_usd"]}
+        if quiet:
+            return out
+        out.messages.append(f"Invoice {d['invoice_id']} covers {d['period']} and totals ${d['total_usd']:.2f} (status: {d['status'].replace('_', ' ').lower()}, due {d['due']}).")
+        for ln in d["lines"]:
+            note = ln.get("evidence", {}).get("note")
+            out.messages.append(f"- {ln['description']}: ${ln['amount_usd']:.2f} (source {ln['evidence']['source']}, ref {ln['evidence']['ref']})" + (f". {note}" if note else ""))
+        if not d["totals_match"]:
+            out.notices.append("The itemised lines do not add up to the invoice total, so I have asked a billing specialist to review it.")
+            state.escalate("Invoice lines do not reconcile with invoice total")
+        elif d["disputable_line_ids"]:
+            out.notices.append("A couple of these charges look worth a second look. Tell me if you want me to dispute them and I'll register it for a specialist to review.")
+        return out
 
-        # 1. Fetch billing overview + itemized CDRs (backend calls may fail or be quarantined by the circuit breaker)
-        try:
-            billing_info = bss_adapter.get_billing_overview(sub_id)
-            cdr_info = bss_adapter.get_itemized_cdr(sub_id)
-        except Exception as e:  # CircuitOpenError or transport failure -> recorded as a tool failure, never a 500
-            logger.error("BSS lookup failed", error=str(e))
-            return self._record(
-                state, start_time,
-                tool_output={"success": False, "error": f"BSS unavailable: {e}"},
-                thought=f"BSS lookup failed: {e}",
-            )
-        if "error" in billing_info or "error" in cdr_info:
-            err = billing_info.get("error") or cdr_info.get("error")
-            return self._record(state, start_time, tool_output={"success": False, "error": err}, thought=f"BSS error: {err}")
+    # ------------------------------------------------------------------ dispute
+    def _dispute(self, state, ent, text, out: AgentOutcome) -> AgentOutcome:
+        self._explain(state, ent, out, quiet=True)
+        inv = state.blackboard.get("invoice")
+        if out.status == "failed" or not inv:
+            return out
+        res = self.call(state, "billing.explain_charges", {"invoice_id": inv["invoice_id"]})
+        lines = res.data["lines"] if res.ok else []
+        disputable = [l for l in lines if l["line_id"] in inv["disputable"]]
+        if ent.get("amount") is not None:
+            matched = [l for l in disputable if abs(l["amount_usd"] - ent["amount"]) < 0.005]
+            total_disputable = sum(l["amount_usd"] for l in disputable)
+            if not matched and ent["amount"] > total_disputable + 0.005:
+                out.notices.append(f"I can't issue a credit of ${ent['amount']:.2f} myself, and the invoice evidence doesn't support that amount. I've asked a billing specialist to review your request.")
+                state.escalate(f"Customer requests ${ent['amount']:.2f}, above the evidence-backed disputed amount (${total_disputable:.2f}); only a human can decide credits")
+                return out
+            disputable = matched or disputable
+        if not disputable:
+            out.notices.append(f"I checked each line of invoice {inv['invoice_id']} against its source records and they all match your plan and usage, so there is nothing I can dispute automatically.")
+            state.escalate("Customer disputes charges that are supported by invoice evidence; needs specialist review")
+            return out
+        res = self.call(state, "billing.register_dispute", {"invoice_id": inv["invoice_id"], "line_ids": [l["line_id"] for l in disputable],
+                                                             "reason": text[:450] or "Customer disputes these charges"})
+        self.interpret(res, out)
+        if res.status.value == "CONFIRMATION_REQUIRED":
+            out.messages.append("The charges that look disputable: " + "; ".join(f"{l['description']} (${l['amount_usd']:.2f})" for l in disputable) + ".")
+            out.notices.append("I can't credit your account myself, but I can register the dispute with this evidence for a billing specialist.")
+        return out
 
-        verified_disputed = float(cdr_info.get("disputed_charges_total_usd") or 0.0)
-        claimed = state.blackboard.get("disputed_amount")
-        refund_requested = bool(REFUND_REQUEST_PATTERN.search(state.sanitized_utterance or ""))
+    # ------------------------------------------------------------------ pay a bill
+    def _pay_bill(self, state, ent, out: AgentOutcome) -> AgentOutcome:
+        self._explain(state, ent, out, quiet=True)
+        inv = state.blackboard.get("invoice")
+        if out.status == "failed" or not inv:
+            return out
+        if inv["status"] == "PAID":
+            out.notices.append(f"Invoice {inv['invoice_id']} is already paid, so there is nothing to pay.")
+            return out
+        if inv["status"].startswith("DISPUTED"):
+            out.notices.append("This invoice is under dispute. Paying it does not stop the dispute review.")
+        method = self._choose_method(state, ent, out)
+        if method is None:
+            return out
+        res = self.call(state, "payment.initiate", {"amount_usd": inv["total_usd"], "method_id": method, "purpose": "BILL_PAYMENT", "reference": inv["invoice_id"]})
+        self.interpret(res, out)
+        return out
 
-        refund_decision: Optional[BillingCreditResult] = None
-        if refund_requested:
-            refund_decision = self._decide_refund(state, sub_id, claimed, verified_disputed)
+    # ------------------------------------------------------------------ recharge
+    def _recharge(self, state, ent, out: AgentOutcome) -> AgentOutcome:
+        rec = self.call(state, "catalog.recommend_recharge")
+        if not self.interpret(rec, out):
+            return out
+        packs = {p["pack_id"]: p for p in rec.data["all_packs"]}
+        pack = packs.get(ent.get("pack_id", "")) or next((p for p in packs.values() if ent.get("amount") is not None and abs(p["amount_usd"] - ent["amount"]) < 0.005), None)
+        if pack is None:
+            r = rec.data["recommended_pack"]
+            out.messages.append(f"Based on your last 30 days of use (about {rec.data['estimated_monthly_need_gb']} GB a month), the closest pack is {r['label']} for ${r['amount_usd']:.2f}.")
+            out.messages.append("Other packs: " + "; ".join(f"{p['label']} ${p['amount_usd']:.2f}" for p in packs.values() if p["pack_id"] != r["pack_id"]) + ".")
+            out.notices.append("Tell me which one you want.")
+            out.clarification = "recharge_pack"
+            return out
+        method = self._choose_method(state, ent, out)
+        if method is None:
+            return out
+        res = self.call(state, "payment.initiate", {"amount_usd": pack["amount_usd"], "method_id": method, "purpose": "RECHARGE", "reference": pack["pack_id"]})
+        self.interpret(res, out)
+        return out
 
-        tool_output = {
-            "success": True,
-            "billing_overview": billing_info,
-            "disputed_charges": verified_disputed,
-            "refund_requested": refund_requested,
-            "refund_result": refund_decision.model_dump() if refund_decision else None,
-        }
+    # ------------------------------------------------------------------ payment status
+    def _payment_status(self, state, ent, out: AgentOutcome) -> AgentOutcome:
+        pid = ent.get("payment_id") or (state.blackboard.get("last_payment_id"))
+        if not pid:
+            out.notices.append("Which payment do you mean? Please share the payment reference (it starts with PAY-).")
+            out.clarification = "payment_id"
+            return out
+        res = self.call(state, "payment.reconcile", {"payment_id": pid})
+        if self.interpret(res, out):
+            out.messages.append(payment_sentence(res.data))
+        return out
 
-        if refund_decision is not None:
-            thought = (
-                f"Reviewed itemized CDR records for {sub_id}; CDR-verified disputed total ${verified_disputed:.2f}, "
-                f"customer claim {'$%.2f' % claimed if claimed is not None else 'unspecified'}. "
-                f"Refund outcome: {refund_decision.authorization_level}."
-            )
-        else:
-            thought = f"Reviewed billing for {sub_id}; no refund requested (CDR-verified disputed total ${verified_disputed:.2f})."
+    # ------------------------------------------------------------------ helpers
+    def _choose_method(self, state, ent, out: AgentOutcome) -> Optional[str]:
+        res = self.call(state, "payment.list_methods")
+        if not self.interpret(res, out):
+            return None
+        methods = res.data["methods"]
+        if not methods:
+            out.notices.append("You don't have a saved payment method. Please add one in the app and I'll take it from there.")
+            return None
+        if ent.get("card_last4"):
+            for m in methods:
+                if ent["card_last4"] in m["label"]:
+                    return m["method_id"]
+        return methods[0]["method_id"]
 
-        return self._record(state, start_time, tool_output=tool_output, thought=thought)
 
-    # ---------------------------------------------------------------- policy
-    def _decide_refund(
-        self,
-        state: AgenticSessionState,
-        sub_id: str,
-        claimed: Optional[float],
-        verified_disputed: float,
-    ) -> BillingCreditResult:
-        """Apply deterministic fiscal policy. The agent can only auto-credit what the CDRs *prove* is disputed."""
-        # A refund must be evidence-based: default the claim to the verified disputed total, never to a magic $30.
-        amount = float(claimed) if claimed is not None else verified_disputed
-
-        if amount <= 0:
-            result = BillingCreditResult(
-                success=False, credited_amount_usd=0.0, new_balance_usd=0.0, authorization_level="REJECTED",
-                message="I couldn't find a disputed charge on your latest bill to credit. A billing specialist can review your account further.",
-            )
-            state.escalate("Refund requested but no CDR-verified disputed charge found")
-            return result
-
-        # Above the hard ceiling: the adapter owns the message/level, the agent only routes to a human.
-        if amount > settings.max_refund_supervisor_required:
-            result = bss_adapter.apply_billing_credit(
-                subscriber_id=sub_id, amount_usd=amount, reason=f"Customer dispute resolution for {sub_id}",
-                authorized_by=self.NAME, auth_context=state.auth_context,
-            )
-            state.escalate(result.message)
-            return result
-
-        # Needs a human when it exceeds the autonomous limit (supervisor approval cannot be self-granted by the agent)
-        # or is not backed by CDR-verified disputed charges (goodwill concession, not a billing error).
-        if amount > settings.max_refund_autonomous or amount > verified_disputed + 0.005:
-            reason = (
-                f"Credit of ${amount:.2f} requires supervisor approval "
-                f"(autonomous limit ${settings.max_refund_autonomous:.2f}; CDR-verified disputed charges ${verified_disputed:.2f})."
-            )
-            state.escalate(reason)
-            return BillingCreditResult(
-                success=False, credited_amount_usd=0.0, new_balance_usd=0.0,
-                authorization_level="ESCALATION_REQUIRED",
-                message=f"{reason} I've sent your request to a supervisor for review.",
-            )
-
-        result = bss_adapter.apply_billing_credit(
-            subscriber_id=sub_id,
-            amount_usd=amount,
-            reason=f"Customer dispute resolution for {sub_id}",
-            authorized_by=self.NAME,
-            auth_context=state.auth_context,
-            idempotency_key=f"{state.session_id}:{sub_id}:{amount:.2f}",
-        )
-        if result.authorization_level in ("ESCALATION_REQUIRED", "REJECTED_UNAUTHORIZED"):
-            state.escalate(result.message)
-        return result
-
-    # --------------------------------------------------------------- plumbing
-    def _record(
-        self,
-        state: AgenticSessionState,
-        start_time: float,
-        tool_output: Dict[str, Any],
-        thought: str,
-        summary_note: Optional[str] = None,
-    ) -> Dict[str, Any]:
-        duration_ms = (time.perf_counter() - start_time) * 1000.0
-        if summary_note:
-            tool_output["customer_note"] = summary_note
-
-        state.record_step(
-            agent_name=self.NAME,
-            action="INVESTIGATE_AND_RESOLVE_BILLING",
-            tool_name="bss_adapter",
-            tool_input={"subscriber_id": state.subscriber_id, "claimed_amount_usd": state.blackboard.get("disputed_amount")},
-            tool_output=tool_output,
-            thought=thought,
-            latency_ms=duration_ms,
-        )
-        ok = tool_output.get("success") is not False
-        state.blackboard["billing_resolved"] = ok
-        state.blackboard["billing_summary"] = tool_output
-        return {
-            "status": "success" if ok else "failed",
-            "agent": self.NAME,
-            "billing_info": tool_output.get("billing_overview"),
-            "refund": tool_output.get("refund_result"),
-            "thought": thought,
-        }
+def payment_sentence(p: Dict[str, Any]) -> str:
+    s = p["status"]
+    amt = f"${p['amount_usd']:.2f}"
+    if s == "SUCCESS":
+        return f"Payment {p['payment_id']} of {amt} was confirmed by the payment provider (ref {p.get('provider_ref')})."
+    if s == "FAILED":
+        return f"Payment {p['payment_id']} of {amt} was declined by the provider, so you have not been charged and nothing was applied."
+    if s == "PENDING":
+        return f"Payment {p['payment_id']} of {amt} is still pending with the provider. I have not applied anything yet and will not until it is confirmed."
+    return f"Payment {p['payment_id']} of {amt} has an unconfirmed outcome. I'm not going to say it worked until the provider confirms; a specialist will reconcile it."
 
 
 billing_agent = BillingAgent()

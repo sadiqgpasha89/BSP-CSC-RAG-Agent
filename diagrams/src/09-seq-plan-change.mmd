@@ -1,0 +1,21 @@
+sequenceDiagram
+  actor C as Customer
+  participant S as Supervisor
+  participant SA as SalesAgent
+  participant G as ToolGateway
+  participant CAT as Catalogue
+  participant CRM as CRM
+  C->>S: Change my plan to 5G Ultra Max
+  S->>SA: handle
+  SA->>G: catalog.check_eligibility
+  G->>CAT: eligibility and price
+  SA-->>C: Price, and warning if legacy terms are lost. Confirm?
+  C->>S: YES
+  G->>CRM: plan.change
+  CRM-->>G: ok
+  G->>CRM: read back current plan
+  alt plan matches
+    G-->>C: Done. Your plan is now 5G Ultra Max
+  else mismatch
+    G-->>C: Could not verify the change. Specialist notified.
+  end

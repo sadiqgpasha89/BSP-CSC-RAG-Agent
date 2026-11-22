@@ -1,5 +1,6 @@
 """Hierarchical Supervisor Agent (Meta-Planner & Execution Orchestrator)."""
 
+import re
 import time
 import uuid
 from typing import Any, Dict, List, Optional, Tuple
@@ -18,11 +19,24 @@ from src.datascience.asr_transcriber import asr_transcriber
 from src.rag.hybrid_retriever import hybrid_retriever
 from src.agents.state import AgenticSessionState
 from src.agents.guardrails import guardrails_service
+from src.agents.entities import extract as extract_entities
 from src.agents.billing_agent import billing_agent
+from src.agents.customer_care_agent import customer_care_agent
+from src.agents.knowledge_agent import knowledge_agent
 from src.agents.network_agent import network_agent
-from src.agents.provisioning_agent import provisioning_agent
+from src.agents.order_agent import order_agent
 from src.agents.retention_agent import retention_agent
+from src.agents.sales_agent import sales_agent
+from src.agents.sim_device_agent import sim_device_agent
+from src.core import i18n
+from src.core.proactive import outage_notifier
+from src.core.auth import auth_service
+from src.core.confirmations import ActionStatus, pending_actions
+from src.core.conversation import Conversation, conversation_store
+from src.datascience.language import language_detector
 from src.hitl.warm_handoff import warm_handoff_manager
+from src.tools.gateway import ToolContext, tool_gateway
+from src.workflows.control import ControlResult, build_auth, control_flow, start_step_up_message
 
 logger = get_logger(__name__)
 
@@ -53,19 +67,50 @@ class SupervisorExecutionResponse(BaseModel):
     escalation_reason: Optional[str] = None
     cloud_routing: Dict[str, Any]
     latency_ms: float
+    language: str = "en"
+    pending_action: Optional[Dict[str, Any]] = None
+    requires_step_up: bool = False
+    sources: List[Dict[str, Any]] = Field(default_factory=list)
+    handover_id: Optional[str] = None
+    agents_involved: List[str] = Field(default_factory=list)
 
 
 class SubscriberNotFoundError(LookupError):
     """Raised when a turn references a subscriber that does not exist in the BSS catalog."""
 
 
+HUMAN_REQUEST_RE = re.compile(
+    r"(\b(talk|speak|chat|connect|transfer)\b.{0,25}\b(human|person|agent|representative|someone|operator|advisor|specialist)\b|\b(real|live) (person|human|agent)\b|"
+    r"\bhuman (agent|please)\b|\bhablar con (un|una)? ?(agente|persona|humano)\b|\b(इंसान|एजेंट|इंसान से|किसी व्यक्ति) ?(से)? ?बात)", re.I)
+POLICY_QUESTION_RE = re.compile(r"^\W*(how (do|does|can|to|long)|what (happens|do i need|should i)|when (do|does|will)|where can i|is it possible)\b", re.I)
+ACCOUNT_MARKER_RE = re.compile(r"(\bINV-|\bTCK-|\bORD-|\bPAY-|\$\s?\d|\bi was\b|\bi want\b|\bplease\b|\bmy (?:line|number|phone|sim)\b.*\b(not|isn't|won't)\b)", re.I)
+
+
+def is_policy_question(text: str) -> bool:
+    """A general 'how does X work' question is answered from the knowledge base, not by acting on the account."""
+    return bool(POLICY_QUESTION_RE.search(text)) and not ACCOUNT_MARKER_RE.search(text)
+
+
 # Execution priority doubles as the topological order of the plan (see _formulate_plan).
 AGENT_PRIORITY = {
-    "NetworkDiagnosticAgent": 0,
-    "ProvisioningAgent": 1,
-    "BillingAgent": 2,
-    "RetentionWorkerAgent": 3,
-    "GeneralRAG": 4,
+    "NetworkAgent": 0,
+    "SimDeviceAgent": 1,
+    "OrderAgent": 2,
+    "BillingAgent": 3,
+    "CustomerCareAgent": 4,
+    "SalesAgent": 5,
+    "RetentionAgent": 6,
+    "KnowledgeAgent": 7,
+}
+
+AGENTS = {
+    "NetworkAgent": network_agent, "SimDeviceAgent": sim_device_agent, "OrderAgent": order_agent, "BillingAgent": billing_agent,
+    "CustomerCareAgent": customer_care_agent, "SalesAgent": sales_agent, "RetentionAgent": retention_agent, "KnowledgeAgent": knowledge_agent,
+}
+
+INTENT_TO_AGENT = {
+    "BILLING_DISPUTE": "BillingAgent", "RECHARGE_PAYMENT": "BillingAgent", "NETWORK_OUTAGE_DIAGNOSTICS": "NetworkAgent",
+    "PROVISIONING_ESIM": "SimDeviceAgent", "PLAN_SALES": "SalesAgent", "ORDER_STATUS": "OrderAgent", "ACCOUNT_SERVICE": "CustomerCareAgent",
 }
 
 HANDOFF_NOTICE = (
@@ -86,6 +131,8 @@ class SupervisorAgent:
         historical_sentiments: Optional[List[float]] = None,
         is_audio: bool = False,
         session_token: Optional[str] = None,
+        channel: str = "web",
+        language_hint: Optional[str] = None,
     ) -> SupervisorExecutionResponse:
         """Execute end-to-end 8-stage cognitive resolution lifecycle."""
         trace_id = f"trc-{uuid.uuid4().hex[:12]}"
@@ -93,7 +140,7 @@ class SupervisorAgent:
         bind_trace_context(trace_id, sess_id)  # every log line of this turn now carries the correlation ids
         try:
             return self._process_turn(
-                user_utterance, subscriber_id, trace_id, sess_id, historical_sentiments, is_audio, session_token
+                user_utterance, subscriber_id, trace_id, sess_id, historical_sentiments, is_audio, session_token, channel, language_hint
             )
         finally:
             clear_trace_context()
@@ -107,6 +154,8 @@ class SupervisorAgent:
         historical_sentiments: Optional[List[float]],
         is_audio: bool,
         session_token: Optional[str],
+        channel: str = "web",
+        language_hint: Optional[str] = None,
     ) -> SupervisorExecutionResponse:
         start_time = time.perf_counter()
 
@@ -117,11 +166,9 @@ class SupervisorAgent:
             raise SubscriberNotFoundError(f"Subscriber '{subscriber_id}' not found")
         canonical_id = sub_data["subscriber_id"]
 
-        auth_context = security_service.resolve_auth_context(
-            subscriber_id=canonical_id,
-            msisdn=sub_data["msisdn"],
-            session_token=session_token,
-        )
+        # A session id is not a credential: a session bound to another subscriber raises PermissionError (API -> 403).
+        conv = conversation_store.get_or_create(sess_id, canonical_id, channel, language_hint or settings.default_language)
+        auth_context = build_auth(conv, canonical_id, sub_data["msisdn"], session_token)
 
         state = AgenticSessionState(
             session_id=sess_id,
@@ -140,7 +187,12 @@ class SupervisorAgent:
             "assigned_sector": sub_data.get("assigned_sector"),
             "clv_usd": sub_data.get("clv_usd", 1500.0),
             "authenticated_level": auth_context.auth_level,
+            "step_up_verified": conv.step_up_active,
+            "channel": channel,
+            "language": conv.language,
         })
+        if historical_sentiments is None and conv.sentiments:
+            historical_sentiments = list(conv.sentiments)
 
         # --- Stage 1: Audio / Ingress & PII Masking ---
         clean_input = user_utterance
@@ -160,6 +212,46 @@ class SupervisorAgent:
             payload={"masked_text": pii_res.masked_text, "redacted_count": pii_res.redacted_entities_count},
         )
 
+        # --- Stage 1b: language, human-handover state, and control replies (YES/NO, one-time code, consent) ---
+        lang_res = language_detector.detect(clean_input, hint=conv.language)
+        if lang_res.confidence > 0 and lang_res.supported:
+            conv.language = lang_res.language
+            state.blackboard["language"] = conv.language
+        elif lang_res.confidence > 0 and not lang_res.supported:
+            state.blackboard["unsupported_language"] = lang_res.language
+
+        if conv.handed_over and conv.handover_state in ("PENDING", "ACTIVE"):
+            conv.add_turn("user", state.sanitized_utterance, language=conv.language)
+            msg = i18n.render("handover_waiting", conv.language, ref=conv.handover_id or "")
+            conv.add_turn("assistant", msg, language=conv.language)
+            warm_handoff_manager.relay_customer_message(conv.handover_id, state.sanitized_utterance) if conv.handover_id else None
+            state.escalate("Conversation is with a human agent")
+            return self._finalize_response(state, msg, start_time, conv=conv, already_handed_over=True)
+
+        control = control_flow.try_handle(state, conv, clean_input)
+        if control is not None:
+            return self._finalize_control(state, conv, control, start_time)
+
+        if HUMAN_REQUEST_RE.search(clean_input):
+            state.escalate("Customer asked to speak to a human")
+            return self._finalize_response(state, "Of course.", start_time, conv=conv)
+
+        # Slot filling: a short reply that supplies a detail an agent just asked for is merged with the original request.
+        slot = conv.notes.pop("awaiting_slot", None)
+        if slot and any(k in extract_entities(user_utterance) for k in slot["keys"]):
+            merged = f"{slot['original']} {clean_input}"
+            state.raw_utterance = f"{slot['original']} {user_utterance}"
+            pii_res = pii_scrubber.mask(merged)
+            state.sanitized_utterance, state.pii_token_map = pii_res.masked_text, pii_res.token_map
+            clean_input = merged
+
+        # A new request supersedes anything the customer left unanswered: stale confirmations are cancelled, not kept armed.
+        for stale in pending_actions.open_for_session(conv.session_id, conv.subscriber_id):
+            if stale.status == ActionStatus.PENDING_CONFIRMATION:
+                tool_gateway.cancel(ToolContext(subscriber_id=state.subscriber_id, session_id=state.session_id, trace_id=state.trace_id, agent=stale.agent,
+                                                auth_context=auth_context), stale.action_id)
+        conv.notes.pop("resume_request", None)
+
         # --- Stage 2: Intent, Sentiment & Churn Triage ---
         intent_res = intent_classifier.classify(state.sanitized_utterance)
         state.primary_intent = intent_res.primary_intent
@@ -171,9 +263,9 @@ class SupervisorAgent:
         state.frustration_velocity = sentiment_res.frustration_velocity
 
         # Only CRITICAL/MAJOR alarms constitute an outage; a MINOR RF-attenuation warning must not deflect customers.
-        active_alarms = data_generator.get_active_alarms_for_sector(
-            sub_data.get("assigned_sector", ""), ACTIVE_OUTAGE_SEVERITIES
-        )
+        outage = network_agent.outage_status(state)
+        active_alarms = [{"alarm_id": a["alarm_id"], "sector": outage.get("sector"), "alarm_type": a.get("type"),
+                          "estimated_restoration_time": a.get("estimated_restoration_time")} for a in outage.get("alarms", [])]
         is_in_outage = len(active_alarms) > 0
 
         churn_res = churn_predictor.predict(
@@ -194,11 +286,14 @@ class SupervisorAgent:
         # Allow specific diagnostic requests (e.g. user specifically asks to test line or OTDR) to run diagnostics
         if is_in_outage and intent_res.primary_intent in ["NETWORK_OUTAGE_DIAGNOSTICS", "GENERAL_INQUIRY"] and "otdr" not in clean_input.lower():
             alarm = active_alarms[0]
+            sub_res = outage_notifier.subscribe(state.subscriber_id, alarm["alarm_id"], alarm.get("sector") or "your area",
+                                                alarm.get("estimated_restoration_time"), conv.language, trace_id)
             deflection_msg = (
                 f"We are aware of an active infrastructure disruption in your area ({alarm.get('sector')}) "
-                f"due to a {alarm.get('alarm_type', 'network event')}. "
+                f"due to a {str(alarm.get('alarm_type') or 'network event').replace('_', ' ').lower()}. "
                 f"Our engineering crews are on-site; estimated full restoration is {alarm.get('estimated_restoration_time')}. "
-                f"We have registered your line for automated status updates via SMS."
+                + (f"We have registered your line for automated status updates via {str(sub_res['channel']).upper()}."
+                   if sub_res["subscribed"] else "I couldn't register you for status updates because service notices are switched off for your contact preferences.")
             )
             state.record_step(
                 agent_name=self.NAME,
@@ -206,14 +301,14 @@ class SupervisorAgent:
                 thought="Matched subscriber sector against active critical network alarm. Executing proactive broadcast deflection.",
                 tool_output={"success": True, "alarm_id": alarm.get("alarm_id"), "deflection_sent": True},
             )
-            return self._finalize_response(state, deflection_msg, start_time)
+            return self._finalize_response(state, deflection_msg, start_time, conv=conv)
 
         # --- Check for Low Intent Confidence Escalation Trigger ---
         if intent_res.requires_hitl_escalation:
             logger.warning("Low intent confidence detected, triggering HITL escalation", conf=intent_res.confidence)
             state.escalate(f"Intent confidence ({intent_res.confidence:.2f}) below threshold ({settings.intent_confidence_threshold})")
             msg = "I am transferring your request directly to a specialized tier-2 human representative to ensure accurate assistance."
-            return self._finalize_response(state, msg, start_time)
+            return self._finalize_response(state, msg, start_time, conv=conv)
 
         # --- Proactive escalation on rapid sentiment collapse (Section 3.3: extreme sentiment degradation) ---
         if sentiment_res.frustration_velocity <= settings.frustration_velocity_threshold:
@@ -225,7 +320,7 @@ class SupervisorAgent:
                 "I'm sorry this has been so frustrating. I'm bringing in a senior specialist right now "
                 "who will have the full context of your conversation."
             )
-            return self._finalize_response(state, msg, start_time)
+            return self._finalize_response(state, msg, start_time, conv=conv)
 
         # --- Stage 4: Formulate Execution Plan (Plan-and-Solve DAG) ---
         dag_tasks = self._formulate_plan(state, intent_res, churn_res)
@@ -294,6 +389,7 @@ class SupervisorAgent:
 
         # --- Stage 7: Guardrail-Enforced Response Synthesis ---
         factual_draft, notices = self._synthesize_response(state, dag_tasks, retrieved)
+        pending_info = self._apply_interaction_requirements(state, conv, notices)
         tool_outputs = [step.tool_output for step in state.execution_stack if step.tool_output]
 
         if factual_draft:
@@ -325,31 +421,30 @@ class SupervisorAgent:
         if state.is_escalated_to_human and state.guardrail_passed and HANDOFF_NOTICE not in final_msg:
             final_msg = f"{final_msg}\n\n{HANDOFF_NOTICE}"
 
-        return self._finalize_response(state, final_msg, start_time, dag_tasks)
+        return self._finalize_response(state, final_msg, start_time, dag_tasks, conv=conv, pending=pending_info)
 
     def _formulate_plan(self, state: AgenticSessionState, intent_res, churn_res) -> List[OrchestrationPlanTask]:
         """Construct a dependency-ordered DAG of worker tasks (one task per agent, topologically sorted).
 
         Edges encode the spec's intra-task dependencies (Stage 4): *validate the network outage before processing a
-        refund for lack of service*, and *retention is formulated last, after every other task has run*.
+        billing request for lack of service*, and *retention is formulated last, after every other task has run*.
         """
         utterance = state.sanitized_utterance
         wanted: Dict[str, str] = {}  # agent -> instruction (dict de-duplicates agents requested by several intents)
 
         for intent in intent_res.all_intents:
-            if intent == "BILLING_DISPUTE":
-                wanted.setdefault("BillingAgent", f"Investigate billing charges and reconcile disputed items: {utterance}")
-            elif intent == "NETWORK_OUTAGE_DIAGNOSTICS":
-                wanted.setdefault("NetworkDiagnosticAgent", f"Diagnose radio and optical line health for {utterance}")
-            elif intent == "PROVISIONING_ESIM":
-                wanted.setdefault("ProvisioningAgent", f"Process provisioning or SIM verification for {utterance}")
+            agent = INTENT_TO_AGENT.get(intent)
+            if agent:
+                wanted.setdefault(agent, f"{agent} handles {intent}: {utterance}")
 
-        # High Churn Risk or Cancellation intent delegates to Retention Agent
+        # High churn risk or cancellation intent delegates to the Retention agent (catalogue offers only)
         if churn_res.is_high_churn_risk or "RETENTION_CHURN_RISK" in intent_res.all_intents:
-            wanted["RetentionWorkerAgent"] = f"Formulate customer retention package for high-risk subscriber ({churn_res.churn_probability:.2f})"
+            wanted["RetentionAgent"] = f"Formulate customer retention package for high-risk subscriber ({churn_res.churn_probability:.2f})"
 
+        if is_policy_question(utterance) and "RETENTION_CHURN_RISK" not in intent_res.all_intents:
+            wanted = {}
         if not wanted:
-            wanted["GeneralRAG"] = "Provide grounded answers from verified knowledge base."
+            wanted["KnowledgeAgent"] = "Provide grounded answers from verified knowledge base."
 
         ordered = sorted(wanted, key=lambda agent: AGENT_PRIORITY[agent])
         tasks = [
@@ -358,27 +453,17 @@ class SupervisorAgent:
         ]
         by_agent = {t.target_agent: t for t in tasks}
 
-        if "BillingAgent" in by_agent and "NetworkDiagnosticAgent" in by_agent:
-            by_agent["BillingAgent"].dependencies.append(by_agent["NetworkDiagnosticAgent"].task_id)
-        if "RetentionWorkerAgent" in by_agent:
-            by_agent["RetentionWorkerAgent"].dependencies.extend(
-                t.task_id for t in tasks if t.target_agent != "RetentionWorkerAgent"
-            )
+        if "BillingAgent" in by_agent and "NetworkAgent" in by_agent:
+            by_agent["BillingAgent"].dependencies.append(by_agent["NetworkAgent"].task_id)
+        if "RetentionAgent" in by_agent:
+            by_agent["RetentionAgent"].dependencies.extend(t.task_id for t in tasks if t.target_agent != "RetentionAgent")
         return tasks
 
     def _dispatch_agent_task(self, state: AgenticSessionState, task: OrchestrationPlanTask) -> Dict[str, Any]:
-        """Route task to corresponding worker agent instance and return its outcome."""
-        agent_name = task.target_agent
-        if agent_name == "BillingAgent":
-            return billing_agent.execute(state, task.instruction)
-        if agent_name == "NetworkDiagnosticAgent":
-            return network_agent.execute(state, task.instruction)
-        if agent_name == "ProvisioningAgent":
-            return provisioning_agent.execute(state, task.instruction)
-        if agent_name == "RetentionWorkerAgent":
-            return retention_agent.execute(state, task.instruction)
-        state.record_step(agent_name=self.NAME, action="RAG_KNOWLEDGE_CONSULTATION", thought="Consulted RAG knowledge base for inquiry resolution.")
-        return {"status": "success", "agent": self.NAME}
+        """Route a task to its worker agent. Agents return an ``AgentOutcome``; the supervisor only reads its status."""
+        agent = AGENTS[task.target_agent]
+        outcome = agent.run(state, task.instruction)
+        return {"status": outcome.status, "agent": task.target_agent}
 
     def _synthesize_response(
         self,
@@ -386,110 +471,60 @@ class SupervisorAgent:
         tasks: List[OrchestrationPlanTask],
         retrieved_chunks: List[Any],
     ) -> Tuple[str, List[str]]:
-        """Synthesize the response, split into (evidence-derived text, system notices).
+        """Combine agent outcomes into (evidence-derived text, system notices).
 
-        Only the evidence-derived text is run through the factuality guardrail; notices (failure explanations,
-        identity prompts) are system-authored templates that make no factual claims about the account.
+        Only the evidence-derived text is run through the factuality guardrail; notices are system-authored templates
+        that make no factual claims about the account.
         """
-        parts: List[str] = []    # actionable, evidence-derived statements
-        info_parts: List[str] = []  # low-value status lines, shown only when nothing better (e.g. a KB answer) exists
+        outcomes = state.blackboard.get("agent_outcomes", {})
+        parts: List[str] = []
         notices: List[str] = []
-
-        # 1. Billing Summary
-        if "billing_summary" in state.blackboard:
-            bs = state.blackboard["billing_summary"]
-            ref = bs.get("refund_result")
-            if bs.get("success") is False:
-                notices.append("I'm having trouble reaching our billing system right now, so I couldn't verify or change anything on your account.")
-            elif bs.get("access_denied"):
-                notices.append(bs.get("customer_note", "I need to verify your identity before I can discuss billing details."))
-            elif ref and ref.get("success"):
-                parts.append(
-                    f"I have reviewed your account and verified the disputed charge. "
-                    f"A billing credit of ${ref.get('credited_amount_usd'):.2f} has been approved and applied to your account (Adjustment ID: {ref.get('adjustment_id')}). Your updated unbilled balance is ${ref.get('new_balance_usd'):.2f}."
-                )
-            elif ref and not ref.get("success"):
-                notices.append(ref.get("message", "Billing adjustment could not be completed."))
-            else:
-                overview = bs.get("billing_overview") or {}
-                disputed = bs.get("disputed_charges") or 0.0
-                sentence = (
-                    f"Your last bill was ${overview.get('last_bill_amount_usd', 0.0):.2f} and your current unbilled usage is "
-                    f"${overview.get('unbilled_usage_usd', 0.0):.2f}."
-                )
-                if disputed > 0:
-                    sentence += f" I can see a disputed charge of ${disputed:.2f} on your account; tell me if you'd like me to review it for a credit."
-                parts.append(sentence)
-
-        # 2. Network Diagnostics Summary
-        if "network_summary" in state.blackboard:
-            ns = state.blackboard["network_summary"]
-            if ns.get("success") is False:
-                notices.append("I couldn't reach our network diagnostics systems just now, so I wasn't able to test your line.")
-            else:
-                otdr = ns.get("otdr_line_test")
-                core_reset = ns.get("core_reset")
-                tower = ns.get("tower_telemetry") or {}
-
-                if otdr and otdr.get("line_status") == "FIBER_CUT_DETECTED":
-                    parts.append(
-                        f"Our optical diagnostic test (OTDR) detected an external optical fiber break at {otdr.get('fault_distance_meters')}m from the distribution hub. "
-                        f"A priority field technician dispatch has been created to splice the damaged line."
-                    )
-                elif otdr:
-                    parts.append(f"Our optical diagnostic test (OTDR) found your fiber line healthy: {otdr.get('diagnostic_summary')}")
-                if core_reset:
-                    parts.append(
-                        f"I executed a network signaling refresh on the cellular core for your number. "
-                        f"{core_reset.get('instruction_for_customer')}"
-                    )
-                if tower.get("status") in ("CRITICAL_ALARM", "DEGRADED_WARNING") and not otdr:
-                    parts.append(
-                        f"Our monitoring shows {tower.get('name')} is reporting {str(tower.get('status')).replace('_', ' ').lower()}"
-                        + (f": {tower.get('root_cause')}" if tower.get("root_cause") else ".")
-                    )
-                elif not otdr and not core_reset and tower.get("status") == "OPERATIONAL":
-                    info_parts.append(f"Our monitoring shows {tower.get('name')} operating normally with no active alarms.")
-                info_parts.extend(ns.get("info") or [])
-                notices.extend(ns.get("notes") or [])
-
-        # 3. Provisioning Summary
-        if "provisioning_result" in state.blackboard:
-            pr = state.blackboard["provisioning_result"]
-            if pr.get("success") is False and pr.get("error"):
-                notices.append("Our provisioning system is unavailable right now, so I couldn't process that request.")
-            elif pr.get("message"):
-                parts.append(pr["message"])
-
-        # 4. Retention Perk Summary
-        if "retention_package" in state.blackboard:
-            rp = state.blackboard["retention_package"]
-            if rp.get("requires_supervisor_approval"):
-                parts.append(
-                    f"Because you are a valued customer, I've asked a supervisor to approve our {rp.get('offer_title')}: {rp.get('concession_details')}"
-                )
-            else:
-                parts.append(
-                    f"Because you are a valued customer with us, I am pleased to offer you our {rp.get('offer_title')}: {rp.get('concession_details')}"
-                )
-
-        # 5. RAG Grounded Advice. Knowledge is the answer when the plan is a pure inquiry, or when the agents produced no
-        # actionable result and raised no notice. It must NOT paper over a refused action (e.g. a refund routed to a
-        # supervisor) with an unrelated document.
-        is_knowledge_plan = bool(tasks) and tasks[0].target_agent == "GeneralRAG"
-        if retrieved_chunks and not parts and (is_knowledge_plan or not notices):
-            top_chunk = retrieved_chunks[0]
-            parts.append(
-                f"Based on our official documentation regarding '{top_chunk.title}':\n"
-                f"{top_chunk.content}"
-            )
-        elif not parts and info_parts:
-            parts.extend(info_parts)
-
+        for task in tasks:
+            o = outcomes.get(task.target_agent)
+            if not o:
+                continue
+            parts.extend(m for m in o["messages"] if m)
+            notices.extend(n for n in o["notices"] if n)
+            if o.get("needs_login"):
+                state.blackboard["needs_login"] = True
+            if o.get("needs_step_up"):
+                state.blackboard["needs_step_up"] = True
+            if o.get("clarification") == "consent":
+                state.blackboard["awaiting_consent"] = True
         if not parts and not notices and state.primary_intent == "GENERAL_INQUIRY":
-            notices.append("I couldn't find verified information to answer that, so I won't guess.")
+            notices.append(i18n.render("not_understood", state.blackboard.get("language", "en")))
+        return "\n".join(p for p in parts if p), notices
 
-        return "\n\n".join(p for p in parts if p), notices
+    def _apply_interaction_requirements(self, state: AgenticSessionState, conv: Conversation, notices: List[str]) -> Optional[Dict[str, Any]]:
+        """Turn gateway signals (pending action, step-up, login) into the customer-facing prompt. Returns pending info."""
+        lang = conv.language
+        pend = state.blackboard.get("pending_actions") or []
+        pending_info: Optional[Dict[str, Any]] = None
+        if pend:
+            keep, extra = pend[0], pend[1:]
+            for e in extra:                       # one consequential action at a time: the customer should read exactly one summary
+                tool_gateway.cancel(ToolContext(subscriber_id=state.subscriber_id, session_id=state.session_id, trace_id=state.trace_id,
+                                                agent=e["agent"], auth_context=state.auth_context), e["action_id"])
+                if "I'll take the other request next" not in " ".join(notices):
+                    notices.append("I'll take the other request next, once this one is done.")
+            act = pending_actions.get(keep["action_id"])
+            if keep["status"] == "CONFIRMATION_REQUIRED":
+                notices.append(i18n.render("confirm_prompt", lang, summary=keep["summary"], minutes=settings.confirmation_ttl_sec // 60))
+            else:
+                notices.append(f"This needs a specialist's approval: {keep['summary']}. I've submitted it for review.")
+            pending_info = {"action_id": keep["action_id"], "summary": keep["summary"], "status": keep["status"], "expires_at": act.expires_at if act else None}
+            conv.pending_action_ids.append(keep["action_id"])
+        if state.blackboard.get("needs_step_up"):
+            conv.notes["resume_request"] = state.blackboard.get("resume_request")
+            notices.append(start_step_up_message(state, conv))
+        elif state.blackboard.get("needs_login"):
+            notices.append(i18n.render("auth_required", lang))
+        if state.blackboard.get("awaiting_slot"):
+            conv.notes["awaiting_slot"] = {**state.blackboard["awaiting_slot"], "original": state.sanitized_utterance[:500]}
+        if state.blackboard.get("awaiting_consent"):
+            conv.notes["awaiting_consent"] = {"purpose": "case_processing"}
+            conv.notes["resume_request"] = state.blackboard.get("resume_request") or conv.notes.get("resume_request")
+        return pending_info
 
     def _finalize_response(
         self,
@@ -497,6 +532,9 @@ class SupervisorAgent:
         final_text: str,
         start_time: float,
         dag_tasks: Optional[List[OrchestrationPlanTask]] = None,
+        conv: Optional[Conversation] = None,
+        pending: Optional[Dict[str, Any]] = None,
+        already_handed_over: bool = False,
     ) -> SupervisorExecutionResponse:
         """Package final execution response, evaluate hybrid cloud routing, and emit analytical telemetry."""
         duration_ms = (time.perf_counter() - start_time) * 1000.0
@@ -550,11 +588,31 @@ class SupervisorAgent:
                 "fcr_resolved": not state.is_escalated_to_human,
                 "escalated_to_human": state.is_escalated_to_human,
                 "customer_sentiment": state.sentiment_score,
+                "subscriber_hash": __import__("hashlib").sha256(state.subscriber_id.encode()).hexdigest()[:12],
+                "language": (conv.language if conv else "en"),
+                "intent": state.primary_intent,
+                "escalation_reason": state.escalation_reason,
             },
         )
 
-        if state.is_escalated_to_human:
-            warm_handoff_manager.create_manifest(state, state.escalation_reason or "Escalated to human tier-2 representative.")
+        handover_id: Optional[str] = None
+        if conv is not None:
+            conv.add_turn("user", state.sanitized_utterance, intent=state.primary_intent, language=conv.language)
+            conv.sentiments.append(state.sentiment_score)
+            conv.intents_seen.append(state.primary_intent)
+        if state.is_escalated_to_human and not already_handed_over:
+            manifest = warm_handoff_manager.create_manifest(state, state.escalation_reason or "Escalated to human tier-2 representative.")
+            handover_id = manifest.escalation_id
+            if conv is not None:
+                conv.handed_over, conv.handover_id, conv.handover_state = True, handover_id, "PENDING"
+                final_text = final_text.replace(HANDOFF_NOTICE, i18n.render("handover_notice", conv.language, ref=handover_id))
+                if i18n.render("handover_notice", conv.language, ref=handover_id) not in final_text and HANDOFF_NOTICE not in final_text:
+                    final_text = f"{final_text}\n\n{i18n.render('handover_notice', conv.language, ref=handover_id)}"
+                state.final_synthesized_response = final_text
+        elif already_handed_over and conv is not None:
+            handover_id = conv.handover_id
+        if conv is not None:
+            conv.add_turn("assistant", final_text, language=conv.language)
 
         return SupervisorExecutionResponse(
             trace_id=state.trace_id,
@@ -574,7 +632,26 @@ class SupervisorAgent:
             escalation_reason=state.escalation_reason,
             cloud_routing=routing.model_dump(),
             latency_ms=round(duration_ms, 2),
+            language=(conv.language if conv else "en"),
+            pending_action=pending,
+            requires_step_up=bool(state.blackboard.get("needs_step_up")),
+            sources=state.blackboard.get("sources", []),
+            handover_id=handover_id,
+            agents_involved=sorted({st.agent_name for st in state.execution_stack if st.agent_name != self.NAME}),
         )
+
+    def _finalize_control(self, state: AgenticSessionState, conv: Conversation, control: ControlResult, start_time: float) -> SupervisorExecutionResponse:
+        """Finish a turn that answered the system (YES/NO/OTP/consent) rather than asking something new."""
+        state.primary_intent = control.intent
+        state.sanitized_utterance = state.sanitized_utterance if control.intent not in ("STEP_UP_FAILED", "STEP_UP_LOCKED") else "[verification code]"
+        conv.transaction_refs.extend(r for r in control.transaction_refs if r)
+        if control.escalate_reason:
+            state.escalate(control.escalate_reason)
+        if state.blackboard.get("step_up_verified") is None:
+            state.blackboard["step_up_verified"] = conv.step_up_active
+        state.blackboard["needs_step_up"] = control.requires_step_up
+        res = self._finalize_response(state, control.message, start_time, conv=conv, pending=control.pending)
+        return res
 
 
 supervisor_agent = SupervisorAgent()

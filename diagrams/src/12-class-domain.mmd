@@ -1,0 +1,87 @@
+classDiagram
+  class ToolGateway {
+    +invoke(ctx, tool, args) ToolResult
+    +confirm(ctx, action_id) ToolResult
+    +cancel(ctx, action_id)
+    +approve(operator, action_id)
+  }
+  class ToolSpec {
+    +name
+    +action
+    +system
+    +args_model
+    +read_only
+  }
+  class ToolContext {
+    +subscriber_id
+    +session_id
+    +trace_id
+    +agent
+    +auth_context
+  }
+  class ToolResult {
+    +status ToolStatus
+    +data
+    +pending_action_id
+    +error_code
+  }
+  class PolicyEngine {
+    +decide(agent, action) Decision
+    +update_action()
+    +set_agent_permissions()
+  }
+  class PendingAction {
+    +action_id
+    +tool
+    +args_hash
+    +status ActionStatus
+    +expires_at
+  }
+  class BaseAgent {
+    +handle(state) AgentOutcome
+    +call(state, tool, args)
+  }
+  class SupervisorAgent {
+    +process_turn() SupervisorExecutionResponse
+  }
+  class Conversation {
+    +session_id
+    +subscriber_id
+    +language
+    +notes
+    +handover_state
+  }
+  class WarmHandoffManifest {
+    +handover_id
+    +summary
+    +priority
+    +status
+  }
+  class AuditRecord {
+    +event_type
+    +prev_hash
+    +hash
+  }
+  class ConsentRecord {
+    +purpose
+    +granted
+  }
+  SupervisorAgent --> BaseAgent : routes to
+  BaseAgent <|-- CustomerCareAgent
+  BaseAgent <|-- BillingAgent
+  BaseAgent <|-- SalesAgent
+  BaseAgent <|-- NetworkAgent
+  BaseAgent <|-- SimDeviceAgent
+  BaseAgent <|-- OrderAgent
+  BaseAgent <|-- RetentionAgent
+  BaseAgent <|-- KnowledgeAgent
+  BaseAgent --> ToolGateway : only path to systems
+  ToolGateway o-- ToolSpec
+  ToolGateway --> ToolContext
+  ToolGateway --> ToolResult
+  ToolGateway --> PolicyEngine
+  ToolGateway --> PendingAction
+  ToolGateway --> AuditRecord
+  ToolGateway --> ConsentRecord
+  SupervisorAgent --> Conversation
+  SupervisorAgent --> WarmHandoffManifest

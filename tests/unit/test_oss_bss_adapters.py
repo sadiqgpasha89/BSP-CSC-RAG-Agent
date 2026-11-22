@@ -7,25 +7,16 @@ from src.tools.circuit_breaker import CircuitBreaker, CircuitBreakerConfig, Circ
 from src.core.security import security_service
 
 
-def test_bss_credit_autonomous_threshold():
-    # <= $50 auto approved
-    res = bss_adapter.apply_billing_credit(
-        subscriber_id="SUB-882194",
-        amount_usd=30.00,
-        reason="Disputed international roaming charge",
-    )
-    assert res.success is True
-    assert res.authorization_level == "AUTONOMOUS"
-    assert res.credited_amount_usd == 30.00
+def test_bss_credit_is_never_autonomous():
+    # Plan §12: no unsupervised refunds. Without a human approver even a small credit is refused.
+    res = bss_adapter.apply_billing_credit(subscriber_id="SUB-882194", amount_usd=30.00, reason="Disputed international roaming charge")
+    assert res.success is False
+    assert res.authorization_level == "ESCALATION_REQUIRED"
+    assert res.credited_amount_usd == 0.0
 
 
-def test_bss_credit_supervisor_required_threshold():
-    # > $50 and <= $100 requires supervisor
-    res = bss_adapter.apply_billing_credit(
-        subscriber_id="SUB-882194",
-        amount_usd=75.00,
-        reason="Service outage goodwill concession",
-    )
+def test_bss_credit_with_human_approver_is_applied_and_attributed():
+    res = bss_adapter.apply_billing_credit(subscriber_id="SUB-882194", amount_usd=75.00, reason="Service outage goodwill concession", approved_by="specialist-17")
     assert res.success is True
     assert res.authorization_level == "SUPERVISOR_OVERRIDE"
 

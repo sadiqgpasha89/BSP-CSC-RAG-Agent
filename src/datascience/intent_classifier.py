@@ -49,7 +49,23 @@ class IntentClassifier:
         "PROVISIONING_ESIM": [
             r"\b(?:esim|sim|activate|activation|sim card|pac code|port|porting|qr code|icc?id|imei|eid)\b",
             r"\b(?:transfer number|new device|swap sim|provision)\b",
-            r"\b(?:roaming pass|activate roaming|wanderlust)\b",
+        ],
+        "PLAN_SALES": [
+            r"\b(?:upgrade|downgrade|add-?on|roaming pass|data boost|recommend(?:ation)?|best plan|cheaper plan|switch plan|change (?:my )?plan|change to|which plan|different plan|compare)\b",
+            r"\b(?:ultra max|plus 50|freedom unlimited|gigawave)\b",
+            r"\b(?:plan(?:es)? (?:m[aá]s|mejor)|cambiar (?:de )?plan|प्लान)\b",
+        ],
+        "RECHARGE_PAYMENT": [
+            r"\b(?:recharge|top[- ]?up|topup|pay (?:my )?(?:bill|invoice)|make a payment|pay now|payment status|data pack)\b",
+            r"\b(?:recarga|recargar|pagar (?:mi )?factura|रिचार्ज|बिल भरना|भुगतान)\b",
+        ],
+        "ORDER_STATUS": [
+            r"\b(?:order|installation|install|technician|appointment|delivery|shipment|engineer visit|ORD-\d+)\b",
+            r"\b(?:pedido|instalaci[oó]n|cita|ऑर्डर)\b",
+        ],
+        "ACCOUNT_SERVICE": [
+            r"\b(?:balance|usage|data left|how much data|validity|my account|profile|update (?:my )?(?:email|address)|change (?:my )?(?:email|address)|case status|ticket|TCK-\d+|complaint|complain|poor service|opt[- ]?out|unsubscribe|stop (?:marketing|messages))\b",
+            r"\b(?:saldo|consumo|mi cuenta|queja|बैलेंस|डेटा कितना|शिकायत)\b",
         ],
         "RETENTION_CHURN_RISK": [
             r"\b(?:cancel|cancellation|switch to|competitor|leaving|terminate|close account|too expensive)\b",
@@ -64,11 +80,12 @@ class IntentClassifier:
     PLAN_PATTERN = re.compile(r"\b(?:5G Ultra Max|GigaWave|Freedom Unlimited|Global Wanderlust)\b", re.IGNORECASE)
 
     # Softmax temperature mapping evidence strength to probability: one strong lexical hit ~0.88, two hits ~0.99.
-    SOFTMAX_TEMPERATURE = 0.10
+    SOFTMAX_TEMPERATURE = 0.085
     # GENERAL_INQUIRY is the catch-all class selected by the *absence* of domain evidence. Its confidence is a fixed
     # prior; the retrieval-relevance gate (tau_rag) is what protects the customer on that path.
     GENERAL_FALLBACK_CONFIDENCE = 0.85
-    DOMAIN_INTENTS = ("BILLING_DISPUTE", "NETWORK_OUTAGE_DIAGNOSTICS", "PROVISIONING_ESIM", "RETENTION_CHURN_RISK")
+    DOMAIN_INTENTS = ("BILLING_DISPUTE", "NETWORK_OUTAGE_DIAGNOSTICS", "PROVISIONING_ESIM", "RETENTION_CHURN_RISK",
+                      "PLAN_SALES", "RECHARGE_PAYMENT", "ORDER_STATUS", "ACCOUNT_SERVICE")
 
     def classify(self, text: str) -> IntentClassificationResult:
         """Classify customer utterance into single or multi-intent dependency graphs.
@@ -83,6 +100,10 @@ class IntentClassifier:
             "NETWORK_OUTAGE_DIAGNOSTICS": 0.05,
             "PROVISIONING_ESIM": 0.05,
             "RETENTION_CHURN_RISK": 0.05,
+            "PLAN_SALES": 0.05,
+            "RECHARGE_PAYMENT": 0.05,
+            "ORDER_STATUS": 0.05,
+            "ACCOUNT_SERVICE": 0.05,
             "GENERAL_INQUIRY": 0.10,
         }
 

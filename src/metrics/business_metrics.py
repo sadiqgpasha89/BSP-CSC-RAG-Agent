@@ -1,6 +1,6 @@
 """Business & Operational Metrics (Section 8.1)."""
 
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel, Field
 from src.data_engineering.lakehouse_sink import lakehouse_sink
 
@@ -9,11 +9,11 @@ class BusinessMetrics(BaseModel):
     first_contact_resolution_pct: float
     average_handling_time_sec: float
     agent_deflection_rate_pct: float
-    csat_score: float  # 1.0 to 5.0
-    net_promoter_score: float  # -100 to +100
+    csat_score: Optional[float] = None  # 1.0 to 5.0; mean of ratings captured via /chat/csat, null when none
+    net_promoter_score: Optional[float] = None  # needs survey ingestion; null until wired
     cost_per_interaction_usd: float
-    total_churn_equity_preserved_usd: float
-    # CSAT / NPS need survey ingestion and churn equity needs CRM outcome joins; they are reference values, not measurements.
+    total_churn_equity_preserved_usd: Optional[float] = None  # needs CRM outcome joins; null until wired
+    # These three are never fabricated: they are null unless a real source exists (see docs/KPI_DEFINITIONS.md).
     reference_fields: List[str] = Field(default_factory=list)
 
 
@@ -36,15 +36,19 @@ class BusinessMetricsCalculator:
         total_opex = total_cost + human_escalation_cost
         cpi = round(total_opex / total_sessions, 3)
 
+        from src.core.conversation import conversation_store
+        ratings = [c.csat for c in conversation_store.all() if getattr(c, "csat", None)]
+        csat = round(sum(ratings) / len(ratings), 2) if ratings else None
+
         return BusinessMetrics(
             first_contact_resolution_pct=fcr,
             average_handling_time_sec=aht,
             agent_deflection_rate_pct=deflection,
-            csat_score=4.62,
-            net_promoter_score=68.4,
+            csat_score=csat,
+            net_promoter_score=None,
             cost_per_interaction_usd=cpi,
-            total_churn_equity_preserved_usd=14850.00,
-            reference_fields=["csat_score", "net_promoter_score", "total_churn_equity_preserved_usd"],
+            total_churn_equity_preserved_usd=None,
+            reference_fields=["net_promoter_score", "total_churn_equity_preserved_usd"] + ([] if ratings else ["csat_score"]),
         )
 
 

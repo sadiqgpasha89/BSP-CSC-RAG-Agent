@@ -1,0 +1,17 @@
+stateDiagram-v2
+  [*] --> PENDING_CONFIRMATION : tool proposes consequential action
+  PENDING_CONFIRMATION --> CANCELLED : customer says NO or sends a new request
+  PENDING_CONFIRMATION --> EXPIRED : TTL elapsed
+  PENDING_CONFIRMATION --> AWAITING_APPROVAL : YES and policy needs human approval
+  PENDING_CONFIRMATION --> EXECUTED : YES and adapter confirms
+  PENDING_CONFIRMATION --> FAILED : YES and adapter refuses
+  PENDING_CONFIRMATION --> OUTCOME_UNKNOWN : YES but no authoritative answer
+  AWAITING_APPROVAL --> EXECUTED : operator approves and adapter confirms
+  AWAITING_APPROVAL --> REJECTED : operator rejects
+  OUTCOME_UNKNOWN --> EXECUTED : reconcile finds success
+  OUTCOME_UNKNOWN --> FAILED : reconcile finds failure
+  EXECUTED --> [*]
+  FAILED --> [*]
+  CANCELLED --> [*]
+  EXPIRED --> [*]
+  REJECTED --> [*]

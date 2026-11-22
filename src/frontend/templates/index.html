@@ -58,6 +58,9 @@
     <button class="nav-tab" data-tab="tab-metrics" id="tab-btn-metrics">
       <span class="tab-icon">📊</span> Unified 6-Category Metrics
     </button>
+    <button class="nav-tab" data-tab="tab-kpis" id="tab-btn-kpis">
+      <span class="tab-icon">✅</span> Measured KPIs
+    </button>
     <button class="nav-tab" data-tab="tab-hitl" id="tab-btn-hitl">
       <span class="tab-icon">🛡️</span> HITL Escalation Queue <span class="badge badge-warning badge-pill" id="hitl-count-badge">0</span>
     </button>
@@ -415,6 +418,21 @@
       </div>
     </section>
 
+    <!-- TAB: MEASURED KPIs (computed from audited events; null when there is no data) -->
+    <section id="tab-kpis" class="tab-pane">
+      <div class="glass-card">
+        <h3>Measured KPIs (plan &sect;13)</h3>
+        <p class="card-desc">Computed from tool outcomes, guardrail verdicts and session records in this process. A blank value means there is no data yet; nothing is estimated. Containment is always shown next to verified task completion and escalation reasons. <a href="/customer" target="_blank" rel="noopener">Open the customer chat</a> to generate traffic.</p>
+        <button class="btn btn-secondary" id="kpi-refresh">Refresh</button>
+        <table class="data-table" id="kpi-table">
+          <thead><tr><th>KPI</th><th>Value</th><th>Numerator / denominator</th><th>Definition</th><th>Caveat</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <h4>Escalations by reason</h4>
+        <pre id="kpi-reasons" class="card-desc"></pre>
+      </div>
+    </section>
+
     <!-- TAB 5: UNIFIED 6-CATEGORY METRICS -->
     <section id="tab-metrics" class="tab-pane">
       <div class="metrics-sections-container">
@@ -423,6 +441,7 @@
         <div class="glass-card metric-section-block">
           <div class="section-badge badge-primary">Category 1</div>
           <h3>Business & Operational Excellence Metrics</h3>
+          <p class="card-desc"><strong>Illustrative demo values &mdash; not measured.</strong> See the &ldquo;Measured KPIs&rdquo; tab for figures computed from real sandbox traffic.</p>
           <div class="metrics-kpi-row">
             <div class="kpi-cell">
               <span class="kpi-num" id="metric-fcr">88.5%</span>
@@ -437,7 +456,7 @@
               <span class="kpi-lbl">Agent Deflection Rate</span>
             </div>
             <div class="kpi-cell">
-              <span class="kpi-num text-accent" id="metric-csat">4.62 / 5</span>
+              <span class="kpi-num text-accent" id="metric-csat">no data</span>
               <span class="kpi-lbl">Customer CSAT</span>
             </div>
             <div class="kpi-cell">

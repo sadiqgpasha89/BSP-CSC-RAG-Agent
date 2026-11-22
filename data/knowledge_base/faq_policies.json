@@ -1,0 +1,162 @@
+[
+  {
+    "id": "KB-FAQ-DISPUTE-001",
+    "title": "How billing disputes work",
+    "category": "billing",
+    "question": "How do I dispute a charge on my bill?",
+    "answer": "Tell the assistant which charge looks wrong. It checks each invoice line against its source record (tariff, usage record or tax table). If a line looks disputable, you confirm and a dispute case is registered with the evidence attached for a billing specialist. The assistant cannot issue credits itself: only a human specialist decides whether a credit is given. The dispute case is handled within 24 hours (priority P2).",
+    "keywords": [
+      "dispute",
+      "refund",
+      "credit",
+      "overcharge",
+      "double charged"
+    ],
+    "owner": "Customer Care Policy",
+    "version": "2026.11",
+    "valid_from": "2026-11-01",
+    "valid_to": null,
+    "language": "en",
+    "is_legacy": false
+  },
+  {
+    "id": "KB-FAQ-RECHARGE-001",
+    "title": "Prepaid recharge and payment confirmation",
+    "category": "payments",
+    "question": "How does a prepaid recharge work and when is it applied?",
+    "answer": "Choose a recharge pack and a saved payment method, then confirm. The recharge is applied only after the payment provider confirms the payment succeeded. If the payment is pending, nothing is applied until it is confirmed. If the provider does not answer, the payment is reconciled with the provider before anything is applied, and you are not charged twice.",
+    "keywords": [
+      "recharge",
+      "top up",
+      "payment",
+      "pending",
+      "declined"
+    ],
+    "owner": "Customer Care Policy",
+    "version": "2026.11",
+    "valid_from": "2026-11-01",
+    "valid_to": null,
+    "language": "en",
+    "is_legacy": false
+  },
+  {
+    "id": "KB-FAQ-COMPLAINT-001",
+    "title": "Complaints, cases and response times",
+    "category": "complaints",
+    "question": "How do I raise a complaint and how long will it take?",
+    "answer": "The assistant can register a complaint case after you confirm and agree to case processing. You receive a case number. Target response times by priority are 4 hours for P1, 24 hours for P2, 72 hours for P3 and 120 hours for P4. Network outages confirmed in your area are P1, billing disputes are P2, and other complaints default to P3. These are internal targets and not a legal commitment.",
+    "keywords": [
+      "complaint",
+      "case",
+      "ticket",
+      "sla",
+      "escalate"
+    ],
+    "owner": "Customer Care Policy",
+    "version": "2026.11",
+    "valid_from": "2026-11-01",
+    "valid_to": null,
+    "language": "en",
+    "is_legacy": false
+  },
+  {
+    "id": "KB-FAQ-SIM-001",
+    "title": "SIM replacement, eSIM and number porting security",
+    "category": "security",
+    "question": "What do I need to replace a SIM or get an eSIM?",
+    "answer": "SIM replacement, eSIM profiles and number porting are protected actions. You must sign in, enter a one-time code sent to your registered contact, and confirm the request. A specialist then reviews and approves it before it is carried out. The assistant never skips these checks, even in an emergency. Keep the one-time code private: we will never ask you to share it.",
+    "keywords": [
+      "sim",
+      "esim",
+      "port",
+      "number transfer",
+      "verification",
+      "otp"
+    ],
+    "owner": "Customer Care Policy",
+    "version": "2026.11",
+    "valid_from": "2026-11-01",
+    "valid_to": null,
+    "language": "en",
+    "is_legacy": false
+  },
+  {
+    "id": "KB-FAQ-CONSENT-001",
+    "title": "Contact preferences and consent",
+    "category": "privacy",
+    "question": "How do I stop marketing messages or choose how you contact me?",
+    "answer": "You can switch off marketing messages or any channel (SMS, email, WhatsApp, push) at any time by telling the assistant. Marketing messages are only sent with your opt-in. Service notices about outages in your area are sent by default on your enabled channels and can be switched off. Transactional messages such as one-time codes and receipts are always sent.",
+    "keywords": [
+      "opt out",
+      "marketing",
+      "consent",
+      "privacy",
+      "unsubscribe"
+    ],
+    "owner": "Customer Care Policy",
+    "version": "2026.11",
+    "valid_from": "2026-11-01",
+    "valid_to": null,
+    "language": "en",
+    "is_legacy": false
+  },
+  {
+    "id": "KB-FAQ-PLANCHANGE-001",
+    "title": "Changing plans and add-ons",
+    "category": "plans",
+    "question": "What happens when I change my plan?",
+    "answer": "The assistant shows the new price, the monthly difference and when the change takes effect before you confirm. Plan changes take effect from the next billing cycle. Some older plans carry grandfathered terms that end when you move to a current plan and cannot be restored. The change is only reported as done after the account system shows the new plan.",
+    "keywords": [
+      "plan change",
+      "upgrade",
+      "downgrade",
+      "grandfathered",
+      "add-on"
+    ],
+    "owner": "Customer Care Policy",
+    "version": "2026.11",
+    "valid_from": "2026-11-01",
+    "valid_to": null,
+    "language": "en",
+    "is_legacy": false
+  },
+  {
+    "id": "KB-FAQ-OUTAGE-001",
+    "title": "Network outages and status updates",
+    "category": "network",
+    "question": "What happens during a network outage in my area?",
+    "answer": "If there is a known outage in your area the assistant tells you the cause and estimated restoration time and registers you for status updates on the channels you allow. You receive one notice when you are registered and one when service is restored. A single faulty line is diagnosed separately; a confirmed technician visit appears in your orders and appointments.",
+    "keywords": [
+      "outage",
+      "network down",
+      "status update",
+      "restoration"
+    ],
+    "owner": "Customer Care Policy",
+    "version": "2026.11",
+    "valid_from": "2026-11-01",
+    "valid_to": null,
+    "language": "en",
+    "is_legacy": false
+  },
+  {
+    "id": "KB-FAQ-HUMAN-001",
+    "title": "Talking to a person",
+    "category": "support",
+    "question": "Can I talk to a human?",
+    "answer": "Yes. Ask for a person at any time. The assistant hands over with a summary so you do not have to repeat yourself, and a specialist replies in the same conversation. It also hands over automatically when a request needs a human decision, when it cannot verify something, or when a system fails.",
+    "keywords": [
+      "human",
+      "agent",
+      "representative",
+      "handover",
+      "escalate"
+    ],
+    "owner": "Customer Care Policy",
+    "version": "2026.11",
+    "valid_from": "2026-11-01",
+    "valid_to": null,
+    "language": "en",
+    "is_legacy": false
+  }
+]

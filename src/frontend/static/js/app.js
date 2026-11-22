@@ -108,6 +108,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (targetId === "tab-mlops") loadMlopsData();
       if (targetId === "tab-metrics") loadMetricsSummary();
       if (targetId === "tab-hitl") loadHitlQueue();
+      if (targetId === "tab-kpis") loadKpis();
     });
   });
 
@@ -446,7 +447,7 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("metric-fcr").textContent = `${d.business.first_contact_resolution_pct}%`;
       document.getElementById("metric-aht").textContent = `${d.business.average_handling_time_sec}s`;
       document.getElementById("metric-deflection").textContent = `${d.business.agent_deflection_rate_pct}%`;
-      document.getElementById("metric-csat").textContent = `${d.business.csat_score} / 5`;
+      document.getElementById("metric-csat").textContent = (d.business.csat_score === null ? "no data" : `${d.business.csat_score} / 5`);
       document.getElementById("metric-cpi").textContent = `$${d.business.cost_per_interaction_usd.toFixed(2)}`;
 
       // System
@@ -478,6 +479,32 @@ document.addEventListener("DOMContentLoaded", () => {
       console.error("Failed to load metrics summary", e);
     }
   }
+
+  // 9b. Measured KPIs (null-aware; rendered with textContent only)
+  async function loadKpis() {
+    const body = document.querySelector("#kpi-table tbody");
+    try {
+      const res = await apiFetch("/api/v1/admin/kpis");
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const d = await res.json();
+      body.replaceChildren();
+      Object.entries(d.kpis).forEach(([name, k]) => {
+        const tr = document.createElement("tr");
+        const unit = k.unit === "pct" ? "%" : k.unit === "ms" ? " ms" : k.unit === "usd" ? " USD" : "";
+        [name.replaceAll("_", " "), k.value === null ? "no data" : k.value + unit,
+         k.denominator ? `${k.numerator ?? "-"} / ${k.denominator}` : "-", k.definition, k.note || ""].forEach((t) => {
+          const td = document.createElement("td"); td.textContent = t; tr.appendChild(td);
+        });
+        body.appendChild(tr);
+      });
+      document.getElementById("kpi-reasons").textContent = JSON.stringify({ escalation_by_reason: d.escalation_by_reason, payment_outcomes: d.payment_outcomes, by_language: d.by_language }, null, 2);
+    } catch (e) {
+      body.replaceChildren();
+      console.error("Failed to load KPIs", e);
+    }
+  }
+  const kpiBtn = document.getElementById("kpi-refresh");
+  if (kpiBtn) kpiBtn.addEventListener("click", loadKpis);
 
   // 10. HITL Queue Loader
   async function loadHitlQueue() {

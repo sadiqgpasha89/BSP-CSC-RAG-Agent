@@ -161,22 +161,23 @@
   <div class="wrap">
     <div class="eyebrow">Use case · Telecom customer support</div>
     <h1>An AI support agent that can safely touch a telco's billing, network and SIMs.</h1>
-    <p class="lead">Most RAG demos answer questions. A telecom support agent also issues credits, resets network cores and re-provisions SIMs, under fraud, regulation and outages. This platform shows how to build one where the model proposes and deterministic code decides.</p>
+    <p class="lead">Most RAG demos answer questions. A telecom support agent also takes payments, changes plans and touches SIMs, under fraud, regulation and outages. This platform shows how to build one where agents and models propose and a policy-enforcing tool gateway decides. All back-end systems are labelled sandbox mocks.</p>
     <div class="btns">
       <a class="btn primary" href="#scenarios">See it handle a case</a>
       <a class="btn" href="https://github.com/sadiqgpasha89/BSP-CSC-RAG-Agent">View on GitHub</a>
-      <a class="btn" href="https://github.com/sadiqgpasha89/BSP-CSC-RAG-Agent/blob/main/docs/medium-article.md">Read the deep-dive</a>
+      <a class="btn" href="https://github.com/sadiqgpasha89/BSP-CSC-RAG-Agent/blob/main/diagrams/README.md">Browse the diagrams</a>
+      <a class="btn" href="https://github.com/sadiqgpasha89/BSP-CSC-RAG-Agent/blob/main/docs/BRD.md">Read the specs</a>
     </div>
     <div class="badges">
-      <span class="badge">Python 3.12</span><span class="badge">FastAPI</span>
-      <span class="badge">Multi-agent DAG</span><span class="badge">4-tier hybrid RAG</span>
-      <span class="badge">OpenStack + GCP</span><span class="badge">Human-in-the-loop</span>
+      <span class="badge">Python</span><span class="badge">FastAPI</span>
+      <span class="badge">8 specialist agents</span><span class="badge">Tool gateway</span>
+      <span class="badge">Hybrid RAG</span><span class="badge">Human-in-the-loop</span>
     </div>
     <div class="stats">
       <div class="stat"><b>8</b><span>pipeline stages, ingress to delivery</span></div>
       <div class="stat"><b>4</b><span>retrieval tiers fused with RRF</span></div>
-      <div class="stat"><b>4</b><span>specialist agents under one supervisor</span></div>
-      <div class="stat"><b>105</b><span>tests, 91% coverage</span></div>
+      <div class="stat"><b>8</b><span>specialist agents under one supervisor</span></div>
+      <div class="stat"><b>148</b><span>automated tests (see README for what was run)</span></div>
     </div>
   </div>
 </section>
@@ -221,8 +222,8 @@
       <li><div><b>Inference router</b><span>Predictable or PII-heavy work goes to on-prem vLLM (Llama 3.1 70B, zero marginal token cost). Complex multi-turn or multimodal work bursts to Gemini on GCP.</span></div></li>
       <li><div><b>Classical ML triage</b><span>Multi-intent classifier, frustration velocity (sentiment slope per turn), churn-risk score, and dialect / code-switching normalizer for noisy ASR.</span></div></li>
       <li><div><b>4-tier hybrid RAG</b><span>Dense vectors, BM25 for hex codes and model numbers, GraphRAG over network topology, then reciprocal-rank fusion and reranking, with strict temporal filtering.</span></div></li>
-      <li><div><b>Hierarchical multi-agent DAG</b><span>A supervisor plans a graph of work for Billing, Network, Provisioning and Retention agents over shared state, and stops loops after 6 steps.</span></div></li>
-      <li><div><b>OSS / BSS tool adapters</b><span>Billing credits, OTDR fiber tests, HSS/UDM resets and eSIM provisioning, each behind a circuit breaker.</span></div></li>
+      <li><div><b>Hierarchical multi-agent DAG</b><span>A supervisor routes to Customer Care, Billing, Sales, Network, SIM &amp; Device, Order, Retention and Knowledge agents over shared state, with a step budget and no delegation loops.</span></div></li>
+      <li><div><b>OSS / BSS tool adapters</b><span>Every system call goes through one tool gateway: typed arguments, ownership check, policy, single-use confirmation, step-up, human approval, idempotency, timeouts and a circuit breaker. Adapters are sandbox mocks.</span></div></li>
       <li><div><b>Deterministic guardrails</b><span>Grounding and factuality checks, regulatory filters and CPNI-leak prevention on every draft answer.</span></div></li>
       <li><div><b>Delivery or warm handoff</b><span>Safe, grounded answers go to the customer with tokens restored. Anything else goes to a Tier-2 human with a pre-filled dossier.</span></div></li>
     </ol>
@@ -246,16 +247,16 @@
       <h3>Verified customer disputes a roaming charge</h3>
       <div class="chat">
         <div class="msg user">I was charged for roaming on a trip I never took. Can you fix this?</div>
-        <div class="msg bot">I found an unbilled-roaming mismatch on your last invoice and applied a credit. You'll see it on your next statement.</div>
+        <div class="msg bot">I can see the roaming line on your invoice and the call records behind it. I can't issue a credit myself, so I've registered a dispute with that evidence for a billing specialist. Shall I confirm?</div>
       </div>
       <ul class="trace">
         <li><b>Scrub:</b> the account number and phone number are tokenized.</li>
         <li><b>Triage:</b> billing dispute intent, with a secondary churn signal.</li>
         <li><b>Plan:</b> the supervisor routes to the Billing agent.</li>
-        <li><b>Act:</b> the agent inspects call records, confirms the roaming error, and credits the account. Credits up to $50 are automatic; up to $100 need supervisor approval.</li>
+        <li><b>Act:</b> the agent inspects the invoice, call records and tariff, registers the dispute after consent and confirmation, and routes it to a specialist. Credits are never autonomous: the policy pack sets the autonomous limit to 0.</li>
         <li><b>Guardrail:</b> the answer is checked against the retrieved invoice facts.</li>
       </ul>
-      <div class="verdict"><b>Outcome:</b> resolved without a human, with an audit trail of every step.</div>
+      <div class="verdict"><b>Outcome:</b> evidence-backed dispute registered, a human decides any credit, every step audited.</div>
     </div>
 
     <div class="panel" role="tabpanel" id="p1" aria-labelledby="t1" hidden>
@@ -267,7 +268,7 @@
       <ul class="trace">
         <li><b>Triage:</b> urgency and emotion detected. This is the classic pressure pattern.</li>
         <li><b>Identity check:</b> the session's assurance level is below out-of-band MFA.</li>
-        <li><b>Policy:</b> the Provisioning agent is blocked in code, not by a prompt instruction.</li>
+        <li><b>Policy:</b> the SIM &amp; Device agent's eSIM action needs OTP step-up and human approval, enforced in code, not by a prompt instruction.</li>
         <li><b>Handoff:</b> a Tier-2 dossier records the request, the block and the reason.</li>
       </ul>
       <div class="verdict"><b>Outcome:</b> the sympathetic story doesn't change the result. No SIM change without verified MFA.</div>
@@ -308,15 +309,16 @@
     <div class="eyebrow">Capabilities</div>
     <h2>What's in the platform</h2>
     <div class="grid g3">
-      <div class="card"><span class="tag good">Cloud</span><h3>Hybrid cloud arbitrage</h3><p>Sensitive and predictable traffic stays on private OpenStack. Complex or multimodal work bursts to GCP, with live cost tracking.</p></div>
+      <div class="card"><span class="tag good">Cloud</span><h3>Hybrid cloud arbitrage</h3><p>A simulated router models on-prem versus cloud cost and latency trade-offs. It makes no live vLLM or Vertex calls.</p></div>
       <div class="card"><span class="tag good">Retrieval</span><h3>4-tier hybrid RAG</h3><p>Dense, BM25, GraphRAG and fusion, filtered by contract validity dates.</p></div>
-      <div class="card"><span class="tag good">Agents</span><h3>Supervisor plus specialists</h3><p>Billing, Network, Provisioning and Retention agents with loop detection and bounded autonomy.</p></div>
-      <div class="card"><span class="tag good">Safety</span><h3>Zero-trust by default</h3><p>PII scrubbing, signed session tokens, admin API keys, circuit breakers and a deterministic guardrail layer.</p></div>
-      <div class="card"><span class="tag good">Humans</span><h3>Tier-2 warm handoff</h3><p>Dossiers with verified identity state, attempted actions, root cause and suggested next steps.</p></div>
+      <div class="card"><span class="tag good">Agents</span><h3>Supervisor plus eight specialists</h3><p>Customer Care, Billing, Sales, Network, SIM &amp; Device, Order, Retention and Knowledge agents with least-privilege permissions and bounded autonomy.</p></div>
+      <div class="card"><span class="tag good">Safety</span><h3>Zero-trust by default</h3><p>Deny-by-default policy pack, signed session tokens, step-up verification, hash-chained audit, admin API keys, circuit breakers and a grounding guardrail.</p></div>
+      <div class="card"><span class="tag good">Humans</span><h3>Tier-2 warm handoff</h3><p>Summary, priority, suggested next action and full transcript; operators claim, reply and resolve while the customer sees the handover.</p></div>
       <div class="card"><span class="tag good">MLOps</span><h3>Drift and self-healing</h3><p>PSI and K-S drift monitors, canary model registry, and one-click retuning of RAG weights.</p></div>
     </div>
 
-    <h3 style="margin-top:36px">Metrics across six dimensions</h3>
+    <h3 style="margin-top:36px">Metrics</h3>
+    <p>The Measured KPIs tab and <code>/api/v1/admin/kpis</code> compute plan KPIs from audited events and return null when there is no data. The six-category table below describes the older illustrative board, whose values are demo data.</p>
     <div class="scroll-x">
     <table>
       <thead><tr><th>Category</th><th>Examples</th></tr></thead>
@@ -332,9 +334,9 @@
     </div>
 
     <h3 style="margin-top:36px">Command Center dashboard</h3>
-    <p>A web console for support supervisors, NOC engineers and AI ops: an omnichannel chat console with a live reasoning trace, a network topology and alarm view, cost arbitrage counters, drift monitors, the six-category metrics board, and the human escalation queue.</p>
+    <p>A web console for support supervisors, NOC engineers and AI ops: an operator chat console with a live reasoning trace, a network topology and alarm view, cost arbitrage counters, drift monitors, the illustrative six-category board, measured KPIs, approvals and the human handover queue. A separate customer chat page lives at <code>/customer</code>.</p>
 
-    <div class="note"><b>Honest scope:</b> this is a high-fidelity reference implementation. There are no live vLLM or Vertex calls. Response synthesis is deterministic templating, embeddings are TF-IDF vectors, and the reranker is a lexical heuristic. The orchestration, policy, security and retrieval logic are real and tested, and the model endpoints sit behind the seams where production ones would plug in.</div>
+    <div class="note"><b>Honest scope:</b> this is a reference implementation on sandbox adapters. No operator system is connected, replies are built deterministically from tool results, there is no live LLM call (an interface with a mock default exists), embeddings are TF-IDF and the reranker is lexical. State is in memory, login is a sandbox PIN, and speech, rate limiting and persistence are not built. The orchestration, policy, confirmation, step-up and audit logic are real and tested. See <a href="https://github.com/sadiqgpasha89/BSP-CSC-RAG-Agent/blob/main/IMPLEMENTATION_STATUS.md">IMPLEMENTATION_STATUS.md</a>.</div>
   </div>
 </section>
 
@@ -342,18 +344,18 @@
   <div class="wrap">
     <div class="eyebrow">Run it</div>
     <h2>Try it locally</h2>
-    <p>You need Python 3.11 or 3.12.</p>
+    <p>You need Python 3.10 or newer.</p>
 <pre><code>git clone https://github.com/sadiqgpasha89/BSP-CSC-RAG-Agent.git
 cd BSP-CSC-RAG-Agent
 python3 -m venv .venv &amp;&amp; source .venv/bin/activate
 pip install -r requirements.txt
 
-pytest tests/ -v --cov=src                      # run the test suite
-uvicorn src.api.app:app --port 8000             # then open http://localhost:8000/</code></pre>
+python -m pytest tests -q                       # run the test suite
+uvicorn src.api.app:app --port 8000             # console: http://localhost:8000/  customer chat: /customer</code></pre>
     <div class="btns">
       <a class="btn primary" href="https://github.com/sadiqgpasha89/BSP-CSC-RAG-Agent">Source on GitHub</a>
-      <a class="btn" href="https://github.com/sadiqgpasha89/BSP-CSC-RAG-Agent/blob/main/enterprise_telco_agentic_rag_architecture.md">Full architecture spec</a>
-      <a class="btn" href="https://github.com/sadiqgpasha89/BSP-CSC-RAG-Agent/blob/main/docs/medium-article.md">Engineering write-up</a>
+      <a class="btn" href="https://github.com/sadiqgpasha89/BSP-CSC-RAG-Agent/blob/main/docs/SADR.md">Architecture decisions</a>
+      <a class="btn" href="https://github.com/sadiqgpasha89/BSP-CSC-RAG-Agent/blob/main/README.md">README</a>
     </div>
   </div>
 </section>

@@ -1,0 +1,53 @@
+erDiagram
+  SUBSCRIBER ||--o{ SUBSCRIPTION : has
+  SUBSCRIBER ||--o{ INVOICE : billed
+  SUBSCRIBER ||--o{ PAYMENT_METHOD : owns
+  SUBSCRIBER ||--o{ PAYMENT : makes
+  SUBSCRIBER ||--o{ CASE : raises
+  SUBSCRIBER ||--o{ ORDER : places
+  SUBSCRIBER ||--o{ CONSENT : grants
+  SUBSCRIBER ||--o{ CONVERSATION : holds
+  SUBSCRIPTION }o--|| PLAN : on
+  SUBSCRIPTION ||--o{ ADDON : includes
+  INVOICE ||--|{ LINE_ITEM : itemises
+  LINE_ITEM }o--o| USAGE_RECORD : evidenced_by
+  CONVERSATION ||--o{ TURN : contains
+  CONVERSATION ||--o{ PENDING_ACTION : proposes
+  PENDING_ACTION ||--o| PAYMENT : may_initiate
+  CONVERSATION ||--o| HANDOVER : escalates
+  PENDING_ACTION ||--o{ AUDIT_RECORD : logged_in
+  SUBSCRIBER {
+    string subscriber_id PK
+    string msisdn
+    string name
+    string account_type
+  }
+  PLAN {
+    string plan_id PK
+    decimal price
+    string status
+  }
+  PAYMENT {
+    string payment_id PK
+    decimal amount
+    string status
+    string idempotency_key
+  }
+  PENDING_ACTION {
+    string action_id PK
+    string tool
+    string args_hash
+    string status
+  }
+  AUDIT_RECORD {
+    int seq PK
+    string event_type
+    string prev_hash
+    string hash
+  }
+  CASE {
+    string case_id PK
+    string category
+    string priority
+    string status
+  }

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Customer Care Assistant (sandbox)</title>
+  <link rel="stylesheet" href="/static/css/customer.css">
+</head>
+<body>
+  <header>
+    <h1>Customer Care Assistant</h1>
+    <span class="pill">Sandbox &middot; mock back-end systems &middot; no real transactions</span>
+  </header>
+
+  <main>
+    <section id="login" aria-labelledby="login-h">
+      <h2 id="login-h">Sign in</h2>
+      <p class="hint">Demo accounts: SUB-882194 (postpaid) &middot; SUB-556201 (prepaid) &middot; SUB-102948 &middot; SUB-449182 &middot; SUB-773019. Sandbox PIN: <code id="demo-pin">1234</code></p>
+      <form id="login-form">
+        <label>Subscriber ID or phone <input id="identifier" autocomplete="username" required></label>
+        <label>PIN <input id="pin" type="password" inputmode="numeric" autocomplete="current-password" required></label>
+        <button type="submit">Sign in</button>
+        <p id="login-error" role="alert" class="error"></p>
+      </form>
+    </section>
+
+    <section id="chat" hidden aria-label="Conversation">
+      <div class="bar">
+        <span id="who"></span>
+        <span id="assurance" class="pill"></span>
+        <label class="lang">Language
+          <select id="lang"><option value="">Auto</option><option value="en">English</option><option value="es">Español</option><option value="hi">हिन्दी</option></select>
+        </label>
+        <button id="signout" class="link">Sign out</button>
+      </div>
+      <div id="log" role="log" aria-live="polite"></div>
+      <div id="confirm" hidden role="group" aria-label="Confirm action">
+        <p id="confirm-summary"></p>
+        <button id="confirm-yes">Confirm</button>
+        <button id="confirm-no" class="secondary">Cancel</button>
+      </div>
+      <div id="stepup" hidden class="notice">We sent a one-time code by SMS. Type the 6 digits below to continue.</div>
+      <form id="send-form">
+        <input id="msg" autocomplete="off" maxlength="2000" placeholder="Ask about your bill, balance, plan, recharge, SIM, outage..." aria-label="Message" required>
+        <button type="submit">Send</button>
+      </form>
+      <div id="csat" hidden>
+        <span>How was this conversation?</span>
+        <button data-score="5">Good</button><button data-score="3">OK</button><button data-score="1">Poor</button>
+      </div>
+      <div class="chips" aria-label="Examples">
+        <button class="chip">Explain my bill</button><button class="chip">Recharge $10</button>
+        <button class="chip">I want to change my plan</button><button class="chip">I need a SIM replacement</button>
+        <button class="chip">My internet is down</button><button class="chip">Talk to a human</button>
+      </div>
+    </section>
+  </main>
+  <footer>Responses come from sandbox systems. Money movement, SIM changes and credits are only ever reported as done after the system confirms them.</footer>
+  <script src="/static/js/customer.js"></script>
+</body>
+</html>

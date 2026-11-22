@@ -1,0 +1,16 @@
+stateDiagram-v2
+  state Handover {
+    [*] --> PENDING : escalation created
+    PENDING --> ACTIVE : operator claims
+    ACTIVE --> RESOLVED_BY_HUMAN : operator resolves
+    PENDING --> DISMISSED
+  }
+  state StepUp {
+    [*] --> NONE
+    NONE --> CHALLENGED : high-risk action at basic_pin
+    CHALLENGED --> VERIFIED : correct code within TTL
+    CHALLENGED --> CHALLENGED : wrong code, attempts left
+    CHALLENGED --> LOCKED : 3 wrong codes, escalate
+    CHALLENGED --> EXPIRED : TTL elapsed
+    VERIFIED --> [*] : elevation expires
+  }

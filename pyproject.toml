@@ -3,17 +3,19 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "enterprise-telco-agentic-rag"
-version = "1.0.0"
-description = "Enterprise Telco Agentic RAG & ML/NLP Customer Support System: Hybrid OpenStack + GCP Architecture"
+name = "bsp-csc-rag-agent"
+version = "2.0.0"
+description = "Telco agentic customer-experience platform: multi-agent orchestration with a policy-enforcing tool gateway, grounded RAG, human handover and measured KPIs (sandbox adapters)"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "Apache-2.0"}
 authors = [
-    {name = "Telco AI & Agentic Platform Engineering", email = "telco-ai@enterprise.internal"}
+    {name = "Sadiq G Pasha"}
 ]
 keywords = [
     "telco-agentic-rag",
+    "tool-gateway",
+    "human-in-the-loop",
     "customer-support-agent",
     "hybrid-cloud",
     "openstack",

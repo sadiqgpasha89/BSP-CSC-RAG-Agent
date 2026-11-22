@@ -1,0 +1,29 @@
+sequenceDiagram
+  actor C as Customer
+  participant S as Supervisor
+  participant G as ToolGateway
+  participant P as Payment gateway
+  participant O as OCS
+  C->>S: Recharge 10 dollars
+  S->>G: payment.initiate (RECHARGE, pm_ok)
+  G->>G: validate, policy, confirmation required
+  G-->>C: Confirm: pay 10.00 with method ending 0512?
+  C->>S: YES
+  S->>G: confirm(action_id)
+  G->>P: charge (idempotency key)
+  alt provider returns SUCCESS
+    P-->>G: SUCCESS + reference
+    G->>O: recharge.apply (only after verified SUCCESS)
+    O-->>G: new balance
+    G-->>C: Recharge applied, reference PAY-...
+  else DECLINED
+    P-->>G: FAILED
+    G-->>C: Declined. Nothing applied.
+  else PENDING or timeout
+    P-->>G: PENDING or no answer
+    G->>G: status OUTCOME_UNKNOWN, no retry
+    G-->>C: Not confirmed yet. Will not be reported as paid until reconciled.
+    G->>P: reconcile (authoritative status)
+  else OCS fails after payment SUCCESS
+    G-->>C: Payment taken, top-up not applied. Specialist notified. You will not be charged again.
+  end

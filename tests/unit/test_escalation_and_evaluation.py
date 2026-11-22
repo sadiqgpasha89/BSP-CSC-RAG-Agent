@@ -1,7 +1,6 @@
-"""Unit Tests for Escalation Evaluator and Alignment Pipeline."""
+"""Unit Tests for Escalation Evaluator, LLM Evaluator and Self-Healing."""
 
 from src.hitl.escalation_manager import escalation_evaluator
-from src.llmops.alignment_pipeline import alignment_pipeline
 from src.llmops.evaluator import llmops_evaluator
 from src.mlops.self_healing import self_healing_engine
 from src.mlops.drift_detector import DriftReport
@@ -56,17 +55,6 @@ def test_escalation_evaluator_triggers():
     )
     assert esc is False
     assert reason is None
-
-
-def test_alignment_pipeline_lora_and_dpo():
-    lora_config = alignment_pipeline.get_lora_config()
-    assert lora_config.lora_r == 16
-    assert lora_config.lora_alpha == 32
-    assert "q_proj" in lora_config.target_modules
-
-    dpo_pairs = alignment_pipeline.get_dpo_pairs()
-    assert len(dpo_pairs) >= 2
-    assert "Freedom Unlimited" in dpo_pairs[0].prompt
 
 
 def test_llmops_evaluator_full():

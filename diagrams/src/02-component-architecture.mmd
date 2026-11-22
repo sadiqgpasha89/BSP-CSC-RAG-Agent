@@ -1,0 +1,51 @@
+flowchart TD
+  subgraph API[FastAPI layer]
+    R1[/chat, auth, channels/]
+    R2[/hitl, approvals, admin/]
+    R3[/metrics, rag, network, mlops/]
+  end
+  subgraph CORE[Core services - src/core]
+    AUTH[auth: PIN login, OTP step-up, lockout]
+    CONV[conversation store: subscriber-bound]
+    POL[policy engine: config/policies.json]
+    CONS[consent per purpose]
+    CONF[pending actions and idempotency]
+    AUD[hash-chained audit log]
+    I18N[i18n and language detection]
+  end
+  subgraph ORCH[Orchestration - src/agents, src/workflows]
+    SUP[SupervisorAgent]
+    CTRL[control flow: YES/NO, OTP, consent]
+    AG[Specialist agents x8]
+  end
+  subgraph TOOLS[Tool gateway - src/tools]
+    GWY[ToolGateway: arg validation, authz, breaker, timeout, read-back]
+    AD[Sandbox adapters]
+  end
+  subgraph KNOW[Knowledge - src/rag, src/data_engineering]
+    ING[ingestion and chunking]
+    RET[hybrid retriever: BM25, vector, graph]
+    GRD[guardrails: grounding and faithfulness]
+  end
+  subgraph OBS[Observability - src/metrics]
+    KPI[KPI service]
+    STR[event stream buffer]
+  end
+  R1 --> SUP
+  SUP --> CTRL
+  SUP --> AG
+  AG --> GWY
+  GWY --> POL
+  GWY --> CONF
+  GWY --> CONS
+  GWY --> AUD
+  GWY --> AD
+  AG --> RET
+  ING --> RET
+  SUP --> GRD
+  SUP --> CONV
+  AUTH --> GWY
+  GWY --> STR --> KPI
+  R2 --> CONF
+  R2 --> POL
+  R3 --> KPI

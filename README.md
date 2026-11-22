@@ -1,289 +1,173 @@
-# Enterprise Telco Autonomous Customer Support Platform (Agentic RAG & Hybrid Cloud)
+# BSP-CSC-RAG-Agent — Telecom Agentic Customer Experience Platform
 
-[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688.svg)](https://fastapi.tiangolo.com)
-[![Pytest Coverage](https://img.shields.io/badge/tests-pytest-brightgreen.svg)](https://docs.pytest.org/)
-[![Architecture](https://img.shields.io/badge/Cloud-OpenStack%20%2B%20GCP-orange.svg)](https://cloud.google.com/)
+[![CI](https://github.com/sadiqgpasha89/BSP-CSC-RAG-Agent/actions/workflows/ci.yml/badge.svg)](https://github.com/sadiqgpasha89/BSP-CSC-RAG-Agent/actions)
+![Python](https://img.shields.io/badge/python-3.10%2B-blue)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.110%2B-009688)
+![Backends](https://img.shields.io/badge/back--end%20systems-sandbox%20(mock)-orange)
 
-🌐 **Live project page:** [https://sadiqgpasha89.github.io/BSP-CSC-RAG-Agent/](https://sadiqgpasha89.github.io/BSP-CSC-RAG-Agent/) — a quick, visual walkthrough of the use case, architecture and edge-case scenarios.
+**Live project page:** <https://sadiqgpasha89.github.io/BSP-CSC-RAG-Agent/>
 
-A production-grade, autonomous Customer Support Representative (CSR) platform for Tier-1 Telecommunications Operators. Built upon the comprehensive specification in [`enterprise_telco_agentic_rag_architecture.md`](./enterprise_telco_agentic_rag_architecture.md), this system implements a hybrid cloud architecture (OpenStack on-premises + Google Cloud Platform), blending classical Machine Learning, 4-tier Hybrid RAG, a Hierarchical Multi-Agent system, deterministic guardrails, and real-time operational telemetry.
+A multi-agent assistant for a telecom operator's consumer mobile and broadband care. It understands the request, retrieves grounded knowledge, reads live data **through a policy-enforcing tool gateway**, runs authorised transactions with explicit confirmation, and hands over to a human with full context when it should.
+
+> **Read this first.** Every enterprise system here (CRM, billing, OCS, payments, ticketing, orders, OSS, notifications) is a **deterministic sandbox adapter**, labelled as such. No operator system is connected. The language-model layer is an interface with a deterministic mock by default; replies are built from structured tool results. Passing tests show that the orchestration, permission and safety logic works, not that a real integration does. See [Limitations](#limitations-and-what-is-not-done).
 
 ---
 
-## 🏛️ High-Level System Architecture
+## What it does
 
-```
-                                  [ INCOMING SUBSCRIBER STREAM ]
-                                  (VoIP ASR, SMS, Web Chat, App)
-                                                │
-                                                ▼
-                        ┌────────────────────────────────────────────────┐
-                        │   STAGE 1: PII / CPNI Scrubber & De-identifier │
-                        │  (Regex + Spacy NER Enclave, Salted Tokens)   │
-                        └───────────────────────┬────────────────────────┘
-                                                │
-                                                ▼
-                        ┌────────────────────────────────────────────────┐
-                        │   STAGE 2: Predictive Inference Router         │
-                        │  (Cost/Token & Latency Arbitrage Engine)       │
-                        └───────┬──────────────────────────────┬─────────┘
-                                │                              │
-          Predictable / PII /   │                              │ Complex Multi-Turn /
-          Zero Variable Cost    │                              │ High-Churn / Multimodal
-                                ▼                              ▼
-                 ┌─────────────────────────────┐┌──────────────────────────────┐
-                 │    OpenStack (On-Prem)      ││     Google Cloud Platform    │
-                 │  vLLM Llama-3.1-70B-Int4   ││  Vertex AI Gemini-1.5-Flash  │
-                 │  Local OSS/BSS & Core IMS   ││  GKE Burst, BigQuery Lakes  │
-                 └──────────────┬──────────────┘└──────────────┬───────────────┘
-                                └──────────────┬───────────────┘
-                                               ▼
-                        ┌────────────────────────────────────────────────┐
-                        │   STAGE 3: Classical ML & NLP Triage Engine   │
-                        │  • Multi-Intent Classifier (τ = 0.82)          │
-                        │  • Frustration Velocity: d(sentiment)/dt       │
-                        │  • Churn Risk Predictor (δ = 0.75)            │
-                        │  • Dialect / Code-Switching Normalizer        │
-                        └───────────────────────┬────────────────────────┘
-                                                │
-                                                ▼
-                        ┌────────────────────────────────────────────────┐
-                        │   STAGE 4: 4-Tier Hybrid RAG Engine            │
-                        │  • Dense Cosine Vector Index (HNSW)            │
-                        │  • Sparse Lexical BM25 (Acronyms & Hex Codes) │
-                        │  • GraphRAG Network Topology Explorer          │
-                        │  • Reciprocal Rank Fusion (RRF k=60) + Neural  │
-                        │  • Strict Temporal / Grandfathered Isolation   │
-                        └───────────────────────┬────────────────────────┘
-                                                │
-                                                ▼
-                        ┌────────────────────────────────────────────────┐
-                        │   STAGE 5: Hierarchical Multi-Agent DAG        │
-                        │  ┌──────────────────────────────────────────┐  │
-                        │  │       SupervisorAgent (Meta-Planner)     │  │
-                        │  └──────┬────────────┬───────────┬──────────┘  │
-                        │         │            │           │             │
-                        │         ▼            ▼           ▼             │
-                        │    [Billing]     [Network]  [Provisioning]     │
-                        │      Agent         Agent       Agent           │
-                        │         │            │           │             │
-                        │         └────────────┼───────────┘             │
-                        │                      ▼                         │
-                        │               [RetentionAgent]                 │
-                        └───────────────────────┬────────────────────────┘
-                                                │
-                                                ▼
-                        ┌────────────────────────────────────────────────┐
-                        │   STAGE 6: Enterprise OSS / BSS Tool Adapters  │
-                        │  • Circuit Breakers (Quarantine & Half-Open)   │
-                        │  • BSS Billing, Invoices & Autonomous Credit   │
-                        │  • OSS OTDR Line Test, Tower Alarms, HSS Reset │
-                        │  • Provisioning eSIM & Anti-SIM-Swap Auth     │
-                        └───────────────────────┬────────────────────────┘
-                                                │
-                                                ▼
-                        ┌────────────────────────────────────────────────┐
-                        │   STAGE 7: Deterministic Safety Guardrails     │
-                        │  • Grounding & NLI Factuality Scrutiny         │
-                        │  • Regulatory & Anti-Hallucination Filters    │
-                        │  • CPNI Leakage Prevention Enclave             │
-                        └───────────────────────┬────────────────────────┘
-                                                │
-                        ┌───────────────────────┴────────────────────────┐
-                        │                                                │
-         [PASS: Grounded & Safe]                           [FAIL or High Risk Escalation]
-                        │                                                │
-                        ▼                                                ▼
-        ┌───────────────────────────────┐               ┌─────────────────────────────────┐
-        │  STAGE 8: Customer Delivery   │               │   STAGE 8b: HITL Warm Handoff   │
-        │  (Restored Tokens & Channel)  │               │   • Tier-2 Human Dossier Queue  │
-        │                               │               │   • Pre-filled Diagnostic Recap │
-        └───────────────────────────────┘               └─────────────────────────────────┘
+| Area | Capabilities (all on sandbox adapters) |
+|---|---|
+| Account and care | Authentication, profile, services, history, complaints with consent, dedup, priority, case tracking, contact preferences |
+| Usage and billing | Prepaid balance and usage, invoice retrieval, itemised explanation with evidence references, dispute registration, payment status and reconciliation |
+| Payments | Recharge and bill payment with confirmation, idempotency, and safe handling of declined, pending, unknown and partially failed outcomes |
+| Plans and retention | Discovery, comparison, eligibility and price check, plan and add-on change with read-back verification, legacy-terms warning, retention offers within policy |
+| Network | Outage check, mobile and broadband diagnostics, technical tickets, consent-aware proactive outage and restoration notices |
+| SIM and number | SIM/eSIM assistance, replacement, eSIM issue and porting with OTP step-up and human approval |
+| Orders | Order, delivery, installation appointment and provisioning status |
+| Human handover | Summary, priority, suggested next action, transcript, claim/reply/resolve, customer sees who is taking over |
+| Governance | Deny-by-default policy pack, least-privilege agent matrix, hash-chained audit log, consent per purpose, operator approvals, KPI service |
+| Channels and language | Web chat page, WhatsApp / voice / contact-centre adapters, English, Spanish and Hindi framing |
+
+Scope follows [the build plan](#how-this-repo-relates-to-the-plan); per-item status is in [`IMPLEMENTATION_STATUS.md`](./IMPLEMENTATION_STATUS.md).
+
+## Architecture
+
+```mermaid
+flowchart TD
+  CH[Web / Mobile / WhatsApp / Voice / Contact centre] --> API[FastAPI: chat, auth, channels]
+  API --> SUP[Supervisor: language, control flow, intent, routing]
+  SUP --> AG[Customer Care · Billing · Sales · Network · SIM & Device · Order · Retention · Knowledge]
+  AG --> GW[Tool Gateway]
+  GW --> POL[Policy pack · consent · confirmation · step-up · approval]
+  GW --> AUD[Hash-chained audit · KPI events]
+  GW --> ADP[Sandbox adapters: CRM, BSS, OCS, payments, ticketing, orders, OSS, notifications]
+  AG --> KB[(Knowledge base · hybrid RAG)]
+  SUP --> HO[Warm handover to human operators]
 ```
 
----
+The design rule: **agents and any language model only propose; the gateway decides.** More diagrams (components, agent topology, ten sequence diagrams, class, ER, deployment, state machines, threat-model DFD) are in [`diagrams/`](./diagrams/README.md).
 
-## ⚡ Key Highlights & Capabilities
+### Safety properties (each has tests)
 
-### 1. Hybrid Cloud Arbitrage (OpenStack On-Prem + GCP)
-* **OpenStack On-Premises**: Private cloud cluster hosting vLLM containerized engines serving quantized open weights (`Llama-3.1-70B-Instruct-Int4`) with zero variable token cost. Direct adjacency to sensitive BSS/OSS databases and carrier-grade IMS cores, strictly retaining PII/CPNI within the private telecom boundary.
-* **Google Cloud Platform (GCP)**: Cloud burst environment deploying Vertex AI Gemini for complex multi-turn reasoning, multimodal network diagnostic images, and BigQuery serverless analytical lakehouses for real-time telemetry streaming and long-term cohort analytics.
+- A session belongs to one customer; another customer's session id or confirmation id never works.
+- Every tool call is validated server-side: typed arguments, no other-customer identifiers, scope, policy.
+- Money and account changes need a **single-use confirmation** that expires and is cancelled by any new request.
+- SIM/eSIM/porting need OTP step-up (3 attempts, then lock and handover) **and** human approval. Credits are never autonomous.
+- A payment is reported as successful only when the provider confirms; pending, timeout and unknown states are explained and reconciled, never retried blindly or reported as paid.
+- Plan and add-on changes are read back from the system before "Done".
+- No tool can change live network infrastructure.
+- Prompt-injection strings, privilege claims and OTP brute force do not widen access; audit masks card numbers, PINs and codes and detects tampering.
 
-### 2. Decoupled Data Engineering (MLOps & LLMOps Principles)
-* **Continuous Ingestion Pipeline** ([`src/data_engineering/ingestion_pipeline.py`](./src/data_engineering/ingestion_pipeline.py)): Incremental chunking, metadata extraction, contractual validity range isolation, and dynamic vector indexing.
-* **GraphRAG Topology Builder** ([`src/data_engineering/graph_rag_builder.py`](./src/data_engineering/graph_rag_builder.py)): NetworkX graph mapping cells, towers, backhaul routers, optical line terminals (OLT), and customer premises equipment (CPE) for upstream incident attribution.
-* **Streaming Event Bus & Analytical Lakehouse** ([`src/data_engineering/stream_processor.py`](./src/data_engineering/stream_processor.py) & [`src/data_engineering/lakehouse_sink.py`](./src/data_engineering/lakehouse_sink.py)): Simulates high-throughput Kafka/PubSub stream processing and daily-partitioned BigQuery ingestion.
+### Journey example: recharge
 
-### 3. Classical ML & NLP Triage Engine
-* **Multi-Intent Classifier** ([`src/datascience/intent_classifier.py`](./src/datascience/intent_classifier.py)): Supervised multi-label classifier calibrated against confidence threshold $\tau_{intent} = 0.82$. Supports simultaneous secondary intents (e.g., Billing Dispute + Churn Threat).
-* **Frustration Velocity Tracker** ([`src/datascience/sentiment_analyzer.py`](./src/datascience/sentiment_analyzer.py)): Computes multi-turn sentiment slope $\frac{d(\text{sentiment})}{dt}$. If frustration velocity $< -0.5/\text{turn}$, escalates proactively before customer rage quit.
-* **Predictive Churn Risk Scorer** ([`src/datascience/churn_predictor.py`](./src/datascience/churn_predictor.py)): Evaluates tenure, billing anomalies, open tickets, and recent network outages against threshold $\delta_{churn} > 0.75$. Triggers specialized Retention Agent workflow.
-* **Dialect & Code-Switching Normalizer** ([`src/datascience/asr_transcriber.py`](./src/datascience/asr_transcriber.py)): Normalizes noisy ASR transcripts, Hinglish, Spanish-English code-switching, and telco colloquialisms into canonical intent queries.
+```mermaid
+sequenceDiagram
+  actor C as Customer
+  participant S as Supervisor
+  participant G as Tool Gateway
+  participant P as Payment (sandbox)
+  participant O as OCS (sandbox)
+  C->>S: Recharge 10 dollars
+  S->>G: payment.initiate
+  G-->>C: Confirm: pay 10.00 with method ending 0512?
+  C->>S: YES
+  G->>P: charge (idempotency key)
+  alt SUCCESS
+    G->>O: recharge.apply (only after verified SUCCESS)
+    G-->>C: Applied, reference PAY-...
+  else declined / pending / unknown
+    G-->>C: Not applied, with the real state and reconciliation
+  end
+```
 
-### 4. 4-Tier Hybrid RAG with Strict Temporal Filtering
-* **Tier 1 (Dense)**: Cosine similarity vector retrieval over chunk embeddings.
-* **Tier 2 (Sparse)**: Lexical BM25 engine specialized in 3GPP acronyms, hex error codes (`0x4F`), and equipment model numbers (`GW-AX6000`).
-* **Tier 3 (GraphRAG)**: Multi-hop graph exploration of network topology and diagnostic SOP dependencies.
-* **Tier 4 (Neural Reranker & Fusion)**: Reciprocal Rank Fusion (RRF $k=60$) dynamically balanced with neural cross-encoder reranking.
-* **Temporal Metadata Filter** ([`src/rag/temporal_filter.py`](./src/rag/temporal_filter.py)): Prevents modern plan limits from leaking into grandfathered 2018 plans (e.g., Alex Mercer on 2026 50GB hotspot vs. Elena Rostova on 2018 10GB hotspot).
+## Quickstart
 
-### 5. Hierarchical Multi-Agent System & HITL Warm Handoff
-* **SupervisorAgent** ([`src/agents/supervisor.py`](./src/agents/supervisor.py)): Central meta-planner constructing directed acyclic execution graphs (DAGs), managing shared blackboard state, and detecting infinite agent loops ($\le 6$ steps).
-* **Specialized Worker Agents**:
-  * `BillingAgent`: Inspects CDR items, verifies unbilled roaming, applies automatic credits up to $\$50.00$ (with supervisor approval up to $\$100.00$).
-  * `NetworkAgent`: Queries tower health, runs virtual Optical Time-Domain Reflectometer (OTDR) fiber tests, and dispatches Diameter soft resets to Ericsson 5G UDM / HSS cores.
-  * `ProvisioningAgent`: Handles eSIM profiles and strictly blocks unauthorized SIM swaps lacking Out-of-Band (OOB) MFA authentication.
-  * `RetentionAgent`: Formulates targeted loyalty concessions for high-risk subscribers.
-* **Tier-2 Human Handoff (HITL)** ([`src/hitl/`](./src/hitl/)): Generates structured warm handoff dossiers with verified identity states, attempted actions, root cause recaps, and pre-filled action items.
-
----
-
-## 📊 Comprehensive 6-Category Metrics Engine
-
-The platform measures and calculates metrics across all 6 telecom operational dimensions:
-
-| Category | Metric | Mathematical Formulation / Description |
-| :--- | :--- | :--- |
-| **1. Business Metrics** | **First Contact Resolution (FCR)** | $\text{FCR} = \frac{\text{Sessions Resolved Without Re-contact}}{\text{Total Sessions}} \times 100$ |
-| | **Average Handling Time (AHT)** | $\text{AHT} = \frac{1}{N} \sum_{i=1}^N T_{\text{duration}}(i)$ |
-| | **Agent Deflection Rate** | $\text{Deflection} = \frac{\text{Sessions Completed Without Human Escalation}}{\text{Total Sessions}} \times 100$ |
-| | **Customer Satisfaction (CSAT)** | $\text{CSAT} = \frac{1}{N} \sum_{i=1}^N \text{Score}_i \quad [1.0 - 5.0]$ |
-| | **Net Promoter Score (NPS)** | $\text{NPS} = \% \text{Promoters} - \% \text{Detractors}$ |
-| | **Cost Per Interaction (CPI)** | $\text{CPI} = \frac{\text{Total Compute, Token \& Infrastructure Cost}}{\text{Total Sessions}}$ |
-| | **Churn Equity Preserved** | $\sum_{\text{retained}} \text{Subscriber CLV} \times P(\text{Churn Avoided})$ |
-| **2. System Metrics** | **P95 / P99 Latency** | 95th and 99th percentile end-to-end turn response times |
-| | **Time To First Token (TTFT)** | Elapsed time from HTTP request receipt to initial streaming token output |
-| | **Inter-Token Latency (ITL)** | Mean delta time between consecutive emitted tokens |
-| | **Token Throughput** | Global tokens generated per second across GPU server clusters |
-| | **GPU VRAM & SM Utilization** | Hardware utilization of Tensor Core SMs and high-bandwidth memory |
-| **3. RAG Metrics** | **Context Precision** | Fraction of retrieved knowledge chunks relevant to the ground truth |
-| | **Context Recall** | Extent to which all facts needed to answer query are present in retrieved chunks |
-| | **Faithfulness Score** | Fraction of response claims directly grounded in retrieved context: $\frac{\lvert C_{\text{grounded}} \rvert}{\lvert C_{\text{total}} \rvert}$ |
-| | **Answer Relevance** | Semantic embedding similarity between user question and final response |
-| | **Hallucination Frequency** | Percentage of turns where ungrounded factual assertions are detected |
-| **4. Agentic Metrics** | **Agent Path Efficiency ($\eta$)** | $\eta = \frac{K^*}{K}$, where $K^*$ is optimal minimal steps and $K$ is actual execution steps |
-| | **Tool Invocation Success (TISR)**| $\text{TISR} = \frac{\text{Successful Tool Calls}}{\text{Total Tool Invocations}} \times 100$ |
-| | **Plan Deviation Index** | Normalized edit distance between initial planner DAG and executed task trajectory |
-| | **Goal Completion Rate (GCR)** | Percentage of multi-step agent plans terminating in full sub-goal attainment |
-| **5. ML / NLP Metrics** | **Intent Classification Macro F1** | Unweighted mean F1 score across all 11 telecommunications intent classes |
-| | **Named Entity Recognition F1** | Token-level precision, recall, and F1 for telecommunications entity extraction |
-| | **ASR Word Error Rate (WER)** | $\text{WER} = \frac{S + D + I}{N}$ across dialect and noisy acoustic inputs |
-| | **Churn Prediction ROC-AUC** | Area under the Receiver Operating Characteristic curve for 30-day churn |
-| **6. Cost & Arbitrage** | **OpenStack vs. GCP Savings** | Cumulative financial savings achieved by routing queries to on-prem vLLM |
-| | **Cost Per 1K Tokens** | Weighted blended cost across on-prem fixed amortized infrastructure and cloud APIs |
-
----
-
-## 🚀 Quickstart Guide
-
-### 1. Prerequisites
-* Python 3.11 or 3.12
-* `uv` or `pip` package manager
-
-### 2. Environment Setup
 ```bash
-# Clone repository and navigate to root
-cd BSP-CSC-RAG-Agent
-
-# Create and activate virtual environment
-python3 -m venv .venv
-source .venv/bin/activate
-
-# Install dependencies
+git clone https://github.com/sadiqgpasha89/BSP-CSC-RAG-Agent && cd BSP-CSC-RAG-Agent
+python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
+cp .env.example .env            # ENVIRONMENT=development needs no keys
+make run                        # or: python -m uvicorn src.api.app:app --port 8000
 ```
 
-### 3. Run Test Suite
-Execute the comprehensive test suite spanning unit, integration, edge cases, and performance:
-```bash
-# Run the full test suite with coverage report
-pytest tests/ -v --cov=src
-```
+- Customer chat: <http://localhost:8000/customer> (sign in as `SUB-882194` or `SUB-556201`; sandbox PIN shown on the page)
+- Operator console: <http://localhost:8000/> (handover queue, approvals, **Measured KPIs** tab)
+- API docs: <http://localhost:8000/docs>
+- Tests: `make test` (or `python -m pytest tests -q`)
+- Diagrams: `make diagrams` (needs `@mermaid-js/mermaid-cli`)
+- Deploy to Google Cloud Run: `PROJECT_ID=... bash deploy/cloudrun/deploy.sh` (see [Deployment](./docs/DEPLOYMENT.md); Vercel is not suitable while state is in memory)
 
-### 4. Launch the Enterprise Platform
-Start the FastAPI server (serving both the REST API and the Command Center Dashboard):
-```bash
-uvicorn src.api.app:app --host 0.0.0.0 --port 8000
-```
+Try these in the chat page: "Explain my bill", "Recharge $10", "I want to change my plan to 5G Ultra Max", "I need a SIM replacement, new ICCID 8901234567890123456" (then enter the code the sandbox sends), "My internet is down", "I want to complain about poor service", "Talk to a human". Payment method ids `pm_decline`, `pm_pending`, `pm_timeout` reproduce failure paths in tests.
 
-Open your browser and navigate to:
-```
-http://localhost:8000/
-```
+### Configuration
 
----
+| Variable | Purpose |
+|---|---|
+| `ENVIRONMENT` | `development` (open console) or anything else (requires keys) |
+| `SECRET_KEY`, `ADMIN_API_KEY` | Required outside development; operators send `X-API-Key` |
+| `CORS_ALLOWED_ORIGINS` | Allowed browser origins |
+| `LLM_PROVIDER` (`mock` or `openai_compatible`), `LLM_ENDPOINT`, `LLM_MODEL`, `LLM_API_KEY` | Optional phrasing layer; default mock |
+| `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN` | WhatsApp webhook; refused without a secret outside development |
+| `DATA_DIR` | Relocate data files |
 
-## 🔐 Security & Deployment Notes
+Policies live in [`config/policies.json`](./config/policies.json): actions, risk, assurance, limits, per-agent permissions, consent defaults, complaint SLAs.
 
-| Setting | Development (`ENVIRONMENT=development`, default) | Anything else (staging / production) |
-| :--- | :--- | :--- |
-| `SECRET_KEY` | Insecure dev default allowed | **Required**, >= 32 chars; the app refuses to start otherwise |
-| `ADMIN_API_KEY` | Optional | **Required**; privileged endpoints (`/network/core-reset`, `/network/otdr-test`, `/mlops/self-heal`, `/hitl/*`, `/chat/subscribers`) need header `X-API-Key` |
-| Default customer assurance | `authenticated_mfa` (so the demo console works without a login flow) | `basic_pin`: SIM/eSIM changes and billing credits are denied unless the request carries a valid signed `session_token` |
-| CORS | `CORS_ALLOWED_ORIGINS` allow-list (default: localhost) | same; no wildcard |
+## Repository map
 
-Generate secrets with `python -c "import secrets; print(secrets.token_urlsafe(48))"`. Session tokens are minted by `SecurityService.generate_session_token(subscriber_id, msisdn, auth_level)` after your identity provider completes step-up MFA.
+| Path | Contents |
+|---|---|
+| `src/agents/` | Supervisor and eight specialist agents |
+| `src/tools/` | Tool gateway and sandbox adapters |
+| `src/workflows/` | YES/NO, OTP, consent and resumption control flow; payment workflow |
+| `src/core/` | Auth, policy, confirmations, consent, conversations, audit, i18n, proactive notices |
+| `src/rag/`, `src/data_engineering/` | Hybrid retrieval, ingestion, event buffer |
+| `src/hitl/`, `src/channels/`, `src/metrics/`, `src/llm/` | Handover, channel adapters, KPI service, LLM interface |
+| `src/api/`, `src/frontend/` | Routers; operator console and customer chat page |
+| `config/`, `data/` | Policy pack; sandbox data and knowledge base |
+| `tests/` | `unit`, `integration`, `security`, `edge_case`, `performance` |
+| `diagrams/` | 18 Mermaid diagrams with rendered SVG |
+| `docs/` | Specifications and operations (below) |
 
-Runtime datasets live in `data/` (tracked) and are resolved relative to the project root (override with `DATA_DIR`), so the service can be started from any working directory.
+## Documentation
 
-A deep-dive on the architecture, sequence flows and the defects fixed in the engineering review is in [`docs/medium-article.md`](./docs/medium-article.md).
+| Document | Audience |
+|---|---|
+| [BRD](./docs/BRD.md) | Business need, scope, rules, risks, compliance review items |
+| [FSD](./docs/FSD.md) | Functional behaviour per capability |
+| [TSD](./docs/TSD.md) | Stack, pipeline, gateway, adapter replacement points, configuration |
+| [SADR](./docs/SADR.md) | Architecture decision records (ADR-001 to ADR-014) |
+| [Threat model](./docs/THREAT_MODEL.md) | Threats, mitigations, tests, residual risk |
+| [API contracts](./docs/API_CONTRACTS.md) | Routes, auth, payload semantics |
+| [KPI definitions](./docs/KPI_DEFINITIONS.md) | Formulas, caveats, baseline plan |
+| [Deployment](./docs/DEPLOYMENT.md) | Cloud Run vs Vercel decision, deploy steps, limits |
+| [Runbook](./docs/RUNBOOK.md) | Run, configure, monitor, incidents, release |
+| [Implementation status](./IMPLEMENTATION_STATUS.md) | Every plan item: status, code path, test path, gap |
+| [Archive](./docs/archive/) | Earlier architecture spec and engineering article (historical) |
 
----
+## KPIs
 
-## 🖥️ Executive Command Center Dashboard
+`GET /api/v1/admin/kpis` computes containment, first-contact resolution, task completion (verified outcome), handling time, CSAT, API execution success, escalation rate by reason, answer-accuracy proxy, payment success, cost per interaction, latency, abandonment, repeat contact, unsafe-action blocks, unsupported-answer rate and tool failure rate from audited events. With no data a KPI is `null` with a note. Containment is always shown beside completion, escalation reasons and CSAT. The older "6-category metrics" tab contains illustrative demo values and is labelled that way.
 
-The frontend dashboard provides a dark-mode glassmorphic user interface for NOC engineers, customer support supervisors, and AI operations leads:
+## Testing
 
-1. **Omnichannel CSR Console**:
-   * Multi-subscriber selector (Alex Mercer, Elena Rostova, Marcus Vance, David Chen) with live plan and billing card hydration.
-   * Real-time chat dialogue with audio transcription toggles.
-   * Dynamic Cognitive Reasoning Trace feed detailing DAG steps, multi-intent detection, frustration velocity, and ground truth guardrail verdicts.
-2. **Network Operations (NOC) & Topology**:
-   * Interactive graph topology visualization of cellular towers, fiber backhauls, and OLT distribution nodes.
-   * Live critical alarm monitors (e.g., active fiber cuts on Sector-7 Sunset Blvd).
-   * Interactive diagnostics: Virtual OTDR optical pulse test triggers and Diameter HSS/UDM soft reset commands.
-3. **Hybrid Cloud & Token Economics**:
-   * Real-time cost comparison between on-premises OpenStack vLLM deployment and GCP cloud APIs.
-   * Cost per 1K tokens and cumulative financial arbitrage counters.
-4. **MLOps & Drift Surveillance**:
-   * Population Stability Index (PSI) and Kolmogorov-Smirnov distribution drift monitoring.
-   * Canary deployment model registry with shadow routing.
-   * Automated one-click self-healing engine rebalancing RAG weights and tool rate limiters.
-5. **6-Category Metrics Dashboard**:
-   * Live operational telemetry covering Business, System, RAG, Agentic, ML, and Cost metrics.
-6. **Tier-2 Human Escalation Queue (HITL)**:
-   * Real-time warm handoff dossier feed with customer lifetime value (CLV), root cause recaps, and one-click supervisor resolution notes.
+148 tests: 147 passed in the environment where this was last run, which lacked FastAPI/httpx, so the two HTTP-route test files (`tests/integration/test_api_endpoints.py`, `test_api_hardening.py`) were **not executed** and the routes were only compile-checked. One logger test failed there because of that missing stack and is expected to pass in a full install, but this is unconfirmed. Run `make test` after `pip install -r requirements.txt` for the full picture. Not covered: browser end-to-end, load, accessibility audit, live-LLM evaluation.
 
----
+## Limitations and what is not done
 
-## 🔌 API Reference & Endpoints
+- All enterprise systems are mocks; replacement points are documented in the [TSD](./docs/TSD.md).
+- State is in process memory: no persistence, no horizontal scaling, audit not durable.
+- Login is a sandbox PIN; no OIDC/identity-provider integration.
+- LLM provider interface and grounding wrapper exist but are not wired into replies and were not run against a live model.
+- No speech-to-text/text-to-speech; the voice adapter takes text.
+- No API rate limiting, OpenTelemetry export, RAG delete API, knowledge-source admin UI, or Kubernetes manifests. CI workflow and Dockerfile are provided but were not executed where this was written.
+- Marketing consent is recorded and opt-outs honoured, but offers are not yet gated on it.
+- Intent classification is lexical and tuned to the sandbox scenarios; Spanish and Hindi coverage is limited to the phrases it knows.
+- Phase 4 (enterprise-wide operations, predictive maintenance, field service, B2B SLA, network automation) is deliberately **not** implemented.
 
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `GET` | `/api/v1/health` | Comprehensive health check and hybrid cloud connectivity status |
-| `GET` | `/api/v1/chat/subscribers` | Returns mock enterprise subscriber profiles |
-| `POST` | `/api/v1/chat/message` | Ingests subscriber utterance, executes 8-stage agentic pipeline, returns response |
-| `GET` | `/api/v1/network/topology` | Returns complete NetworkX cell and backhaul node graph |
-| `GET` | `/api/v1/network/alarms` | Returns real-time active network alarms |
-| `POST` | `/api/v1/network/otdr-test` | Executes virtual OTDR fiber optical reflection analysis |
-| `POST` | `/api/v1/network/core-reset` | Executes Diameter soft-reset on 5G Core UDM/HSS |
-| `GET` | `/api/v1/metrics/summary` | Returns unified snapshot of all 6 metric categories |
-| `GET` | `/api/v1/metrics/cost-arbitrage` | Returns OpenStack vs. GCP cost arbitrage statistics |
-| `GET` | `/api/v1/mlops/drift` | Returns PSI and K-S drift surveillance indicators |
-| `GET` | `/api/v1/mlops/models` | Returns model registry and active canary statuses |
-| `POST` | `/api/v1/mlops/self-heal` | Triggers automated self-healing mitigation policies |
-| `GET` | `/api/v1/hitl/queue` | Returns pending Tier-2 human escalation dossiers |
-| `POST` | `/api/v1/hitl/resolve` | Resolves an active escalation dossier |
-| `POST` | `/api/v1/rag/search` | Direct test endpoint for the 4-tier Hybrid RAG engine |
-| `GET` | `/api/v1/rag/subgraph/{entity_id}` | Traverses the GraphRAG neighbourhood around an entity |
+## How this repo relates to the plan
 
----
+This version expands the original hybrid-cloud RAG demo to the capabilities in the *Telecom Agentic AI Customer Experience Platform — Build Plan*: eight specialist agents, the tool gateway, the five priority journeys plus plan change, SIM/eSIM, orders and handover, consent and approval workflows, KPI instrumentation, channels, and documentation. The earlier retrieval, ML/NLP, MLOps, hybrid-router and network-console components are retained. Earlier design material moved to `docs/archive/`. Removed as not fitting: the training-time `alignment_pipeline` stub, the old provisioning agent (replaced by the SIM & Device and Order agents), and hard-coded CSAT/NPS/churn-equity figures (now measured or null).
 
-## 🛡️ Telco Edge Cases Handled
+## License
 
-1. **Outage Storm Geofence Deflection**: Automatically intercepts subscribers connected to towers with active critical alarms (e.g. Sector-7 fiber slice) and deflects routine inquiries with automated broadcast messages to protect CSR queues.
-2. **SIM-Swap Zero-Trust Anti-Fraud**: Strictly blocks high-risk SIM replacement and eSIM re-profiling if physical identity or out-of-band MFA authentication is missing.
-3. **OSS / BSS Circuit Breakers**: Automatically isolates failing backend microservices (e.g., CDR billing query timeout) to prevent catastrophic cascading thread pool exhaustion.
-4. **Agentic Loop Termination**: Monitors execution stack signatures; if the same agent and tool invocation repeats 3 times or total steps exceed 6, terminates loop and triggers warm handoff.
-5. **Grandfathered Plan Temporal Isolation**: Automatically pins temporal contracts to subscriber activation dates, preventing invalid modern terms (e.g., 50GB hotspot) from being promised to legacy subscribers.
+Apache-2.0 (see `pyproject.toml`).

@@ -1,0 +1,19 @@
+sequenceDiagram
+  actor C as Customer
+  participant API as Chat API
+  participant S as Supervisor
+  participant A as CustomerCareAgent
+  participant G as ToolGateway
+  participant O as OCS adapter
+  C->>API: What is my balance? (session token)
+  API->>S: process_turn
+  S->>S: classify intent ACCOUNT_SERVICE
+  S->>A: handle
+  A->>G: usage.get_balance
+  G->>G: scope, policy, args check
+  G->>O: get_balance(subscriber)
+  O-->>G: balance, validity, data left
+  G-->>A: OK + data
+  A-->>S: message built from tool result
+  S->>S: guardrails check numbers against result
+  S-->>C: Balance, validity and data remaining (source: OCS sandbox)
